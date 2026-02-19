@@ -17,94 +17,47 @@ class AppRouter {
   static final GlobalKey<NavigatorState> _rootNavigatorKey =
       GlobalKey<NavigatorState>();
 
-  static GoRouter create(AppState appState) {
-    return GoRouter(
-      navigatorKey: _rootNavigatorKey,
-      initialLocation: RouteConstants.login,
-      debugLogDiagnostics: true,
-      refreshListenable: appState,
-      routes: [
-        GoRoute(
-          path: RouteConstants.login,
-          name: RouteConstants.loginName,
-          builder: (context, state) => const LoginScreen(),
-        ),
-        GoRoute(
-          path: RouteConstants.dashboard,
-          name: RouteConstants.dashboardName,
-          builder: (context, state) => const MenuDashboardScreen(),
-        ),
-        GoRoute(
-          path: RouteConstants.orderDetail,
-          name: RouteConstants.orderDetailName,
-          builder: (context, state) {
-            final order = state.extra as Order?;
-            if (order == null) {
-              return _MissingOrderPage(
-                  onBack: () => context.go(RouteConstants.dashboard));
-            }
-            return OrderDetailScreen(order: order);
-          },
-        ),
-        GoRoute(
-          path: RouteConstants.kitchenQueue,
-          name: RouteConstants.kitchenQueueName,
-          builder: (context, state) => const KitchenQueueScreen(),
-        ),
-        GoRoute(
-          path: RouteConstants.kitchenStatus,
-          name: RouteConstants.kitchenStatusName,
-          builder: (context, state) => const KitchenStatusScreen(),
-        ),
-      ],
-      errorBuilder: (context, state) => Scaffold(
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Text(
-                'Page Not Found',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 16),
-              Text('Route: ${state.uri.path}'),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: () => GoRouter.of(context).go(RouteConstants.login),
-                child: const Text('Go to Login'),
-              ),
-            ],
-          ),
-        ),
+  /// GoRouter instance with route configurations
+  static final GoRouter router = GoRouter(
+    navigatorKey: _rootNavigatorKey,
+    initialLocation: RouteConstants.login,
+    debugLogDiagnostics: true,
+    routes: [
+      // Login / Role Selection Route
+      GoRoute(
+        path: RouteConstants.login,
+        name: RouteConstants.loginName,
+        builder: (context, state) => const LoginScreen(),
       ),
-    );
-  }
-}
 
-class _MissingOrderPage extends StatelessWidget {
-  const _MissingOrderPage({required this.onBack});
+      // Waiter Dashboard Route
+      GoRoute(
+        path: RouteConstants.dashboard,
+        name: RouteConstants.dashboardName,
+        builder: (context, state) => const MenuDashboardScreen(),
+      ),
+    ],
 
-  final VoidCallback onBack;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
+    // Error handling for unknown routes
+    errorBuilder: (context, state) => Scaffold(
       body: Center(
         child: Column(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Text(
-              'Order data not found',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              'Page Not Found',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
+            Text('Route: ${state.uri.path}'),
+            const SizedBox(height: 24),
             ElevatedButton(
-              onPressed: onBack,
-              child: const Text('Back to Dashboard'),
+              onPressed: () => GoRouter.of(context).go(RouteConstants.login),
+              child: const Text('Go to Login'),
             ),
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
 }
