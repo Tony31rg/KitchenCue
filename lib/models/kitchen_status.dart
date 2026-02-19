@@ -1,2 +1,6 @@
-// Kitchen Status Model
-// TODO: Define KitchenStatus (busy/available)
+enum KitchenStatus { ready, busy }
+
+extension KitchenStatusX on KitchenStatus {
+  bool get isBusy => this == KitchenStatus.busy;
+  String get label => this == KitchenStatus.busy ? 'Busy' : 'Ready';
+}
