@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 import '../constants/route_constants.dart';
 import '../../features/auth/screens/login_screen.dart';
 import '../../features/menu_dashboard/screens/menu_dashboard_screen.dart';
+import '../../features/kitchen_queue/screens/kitchen_queue_screen.dart';
+import '../../features/order_management/screens/order_detail_screen.dart';
 
 /// App Router configuration using GoRouter
 /// Handles navigation between Waiter and Kitchen interfaces
@@ -31,6 +33,27 @@ class AppRouter {
         path: RouteConstants.dashboard,
         name: RouteConstants.dashboardName,
         builder: (context, state) => const MenuDashboardScreen(),
+      ),
+
+      // Kitchen Queue Route
+      GoRoute(
+        path: RouteConstants.kitchenQueue,
+        name: RouteConstants.kitchenQueueName,
+        builder: (context, state) => const KitchenQueueScreen(),
+      ),
+
+      // Order Detail Route
+      GoRoute(
+        path: RouteConstants.orderDetail,
+        name: RouteConstants.orderDetailName,
+        builder: (context, state) {
+          final orderId = state.uri.queryParameters['orderId'];
+          final tableNumber = state.uri.queryParameters['tableNumber'];
+          return OrderDetailScreen(
+            orderId: orderId,
+            tableNumber: tableNumber,
+          );
+        },
       ),
     ],
     
