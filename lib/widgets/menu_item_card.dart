@@ -46,19 +46,27 @@ class MenuItemCard extends StatelessWidget {
                       ),
                       color: Colors.grey[300],
                     ),
-                    child: Image.network(
-                      menuItem.imageUrl,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Center(
-                          child: Icon(
-                            Icons.image_not_supported,
-                            color: Colors.grey[600],
-                            size: 40,
+                    child: menuItem.imageUrl != null
+                        ? Image.network(
+                            menuItem.imageUrl!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Center(
+                                child: Icon(
+                                  Icons.image_not_supported,
+                                  color: Colors.grey[600],
+                                  size: 40,
+                                ),
+                              );
+                            },
+                          )
+                        : Center(
+                            child: Icon(
+                              Icons.restaurant,
+                              color: Colors.grey[500],
+                              size: 40,
+                            ),
                           ),
-                        );
-                      },
-                    ),
                   ),
                   // Content section
                   Padding(

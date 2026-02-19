@@ -5,6 +5,7 @@ class MenuItem {
     required this.price,
     required this.stock,
     required this.category,
+    this.imageUrl,
   });
 
   final String id;
@@ -12,6 +13,10 @@ class MenuItem {
   final double price;
   final int stock;
   final String category;
+  final String? imageUrl;
+
+  /// Alias so Codespace-generated widgets compile unchanged.
+  int get stockCount => stock;
 
   MenuItem copyWith({
     String? id,
@@ -19,6 +24,7 @@ class MenuItem {
     double? price,
     int? stock,
     String? category,
+    String? imageUrl,
   }) {
     return MenuItem(
       id: id ?? this.id,
@@ -26,6 +32,7 @@ class MenuItem {
       price: price ?? this.price,
       stock: stock ?? this.stock,
       category: category ?? this.category,
+      imageUrl: imageUrl ?? this.imageUrl,
     );
   }
 }

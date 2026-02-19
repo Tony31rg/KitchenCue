@@ -127,7 +127,8 @@ class _CategoryTabBarState extends State<CategoryTabBar> {
                     boxShadow: isSelected
                         ? [
                             BoxShadow(
-                              color: _RestoSyncTheme.primary.withOpacity(0.3),
+                              color: _RestoSyncTheme.primary
+                                  .withValues(alpha: 0.3),
                               blurRadius: 8,
                               offset: const Offset(0, 4),
                             ),
@@ -139,7 +140,8 @@ class _CategoryTabBarState extends State<CategoryTabBar> {
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
-                      color: isSelected ? Colors.white : _RestoSyncTheme.darkGrey,
+                      color:
+                          isSelected ? Colors.white : _RestoSyncTheme.darkGrey,
                     ),
                   ),
                 ),

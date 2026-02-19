@@ -17,47 +17,80 @@ class AppRouter {
   static final GlobalKey<NavigatorState> _rootNavigatorKey =
       GlobalKey<NavigatorState>();
 
-  /// GoRouter instance with route configurations
-  static final GoRouter router = GoRouter(
-    navigatorKey: _rootNavigatorKey,
-    initialLocation: RouteConstants.login,
-    debugLogDiagnostics: true,
-    routes: [
-      // Login / Role Selection Route
-      GoRoute(
-        path: RouteConstants.login,
-        name: RouteConstants.loginName,
-        builder: (context, state) => const LoginScreen(),
-      ),
-
-      // Waiter Dashboard Route
-      GoRoute(
-        path: RouteConstants.dashboard,
-        name: RouteConstants.dashboardName,
-        builder: (context, state) => const MenuDashboardScreen(),
-      ),
-    ],
-
-    // Error handling for unknown routes
-    errorBuilder: (context, state) => Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text(
-              'Page Not Found',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            Text('Route: ${state.uri.path}'),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: () => GoRouter.of(context).go(RouteConstants.login),
-              child: const Text('Go to Login'),
-            ),
-          ],
+  static GoRouter create(AppState appState) {
+    return GoRouter(
+      navigatorKey: _rootNavigatorKey,
+      initialLocation: RouteConstants.login,
+      debugLogDiagnostics: true,
+      refreshListenable: appState,
+      routes: [
+        GoRoute(
+          path: RouteConstants.login,
+          name: RouteConstants.loginName,
+          builder: (context, state) => const LoginScreen(),
+        ),
+        GoRoute(
+          path: RouteConstants.dashboard,
+          name: RouteConstants.dashboardName,
+          builder: (context, state) => const MenuDashboardScreen(),
+        ),
+        GoRoute(
+          path: RouteConstants.orderDetail,
+          name: RouteConstants.orderDetailName,
+          builder: (context, state) {
+            final order = state.extra as Order?;
+            if (order == null) {
+              return Scaffold(
+                body: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text('Order not found'),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: () =>
+                            GoRouter.of(context).go(RouteConstants.dashboard),
+                        child: const Text('Back to Dashboard'),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+            return OrderDetailScreen(order: order);
+          },
+        ),
+        GoRoute(
+          path: RouteConstants.kitchenQueue,
+          name: RouteConstants.kitchenQueueName,
+          builder: (context, state) => const KitchenQueueScreen(),
+        ),
+        GoRoute(
+          path: RouteConstants.kitchenStatus,
+          name: RouteConstants.kitchenStatusName,
+          builder: (context, state) => const KitchenStatusScreen(),
+        ),
+      ],
+      errorBuilder: (context, state) => Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text(
+                'Page Not Found',
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              Text('Route: ${state.uri.path}'),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () => GoRouter.of(context).go(RouteConstants.login),
+                child: const Text('Go to Login'),
+              ),
+            ],
+          ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }

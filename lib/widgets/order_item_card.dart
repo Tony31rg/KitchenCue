@@ -45,7 +45,7 @@ class OrderItemCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Card(
-        margin: const EdgeInsets.zero,
+        margin: EdgeInsets.zero,
         elevation: 2,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
@@ -126,7 +126,7 @@ class OrderItemCard extends StatelessWidget {
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: RestoSyncTheme.primary.withOpacity(0.1),
+                          color: RestoSyncTheme.primary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
@@ -159,7 +159,7 @@ class OrderItemCard extends StatelessWidget {
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: RestoSyncTheme.primary.withOpacity(0.1),
+                          color: RestoSyncTheme.primary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(

@@ -49,8 +49,8 @@ class RoleCard extends StatelessWidget {
           boxShadow: [
             BoxShadow(
               color: isSelected
-                  ? _RestoSyncTheme.primary.withOpacity(0.2)
-                  : Colors.black.withOpacity(0.05),
+                  ? _RestoSyncTheme.primary.withValues(alpha: 0.2)
+                  : Colors.black.withValues(alpha: 0.05),
               blurRadius: isSelected ? 12 : 6,
               offset: const Offset(0, 4),
             ),
@@ -65,7 +65,7 @@ class RoleCard extends StatelessWidget {
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: isSelected
-                    ? _RestoSyncTheme.primary.withOpacity(0.1)
+                    ? _RestoSyncTheme.primary.withValues(alpha: 0.1)
                     : _RestoSyncTheme.lightGrey,
                 shape: BoxShape.circle,
               ),
@@ -85,9 +85,7 @@ class RoleCard extends StatelessWidget {
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: isSelected
-                    ? _RestoSyncTheme.primary
-                    : Colors.black87,
+                color: isSelected ? _RestoSyncTheme.primary : Colors.black87,
               ),
             ),
             const SizedBox(height: 8),
