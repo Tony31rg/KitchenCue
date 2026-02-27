@@ -1,0 +1,42 @@
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "kitchencue-a4d6d",
+          "appId": "1:191638601682:android:f982c71d45519a4e5c520b",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "kitchencue-a4d6d",
+          "configurations": {
+            "android": "1:191638601682:android:f982c71d45519a4e5c520b",
+            "ios": "1:191638601682:ios:d5c183da34b7fc765c520b",
+            "macos": "1:191638601682:ios:d5c183da34b7fc765c520b",
+            "web": "1:191638601682:web:363da6f5f6a8edd25c520b",
+            "windows": "1:191638601682:web:c4b53d0c54be69f35c520b"
+          }
+        }
+      }
+    }
+  },
+  "hosting": {
+    "public": "build/web",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  },
+  "emulators": {
+    "singleProjectMode": true
+  }
+}

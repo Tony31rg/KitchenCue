@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "191638601682",
+    "project_id": "kitchencue-a4d6d",
+    "storage_bucket": "kitchencue-a4d6d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:191638601682:android:f982c71d45519a4e5c520b",
+        "android_client_info": {
+          "package_name": "com.example.kitchen_cue"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDkI-y9PyeASbJAcSpV5U_PpWXCCKMzytc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
