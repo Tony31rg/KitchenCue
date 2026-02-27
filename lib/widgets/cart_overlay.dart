@@ -239,12 +239,27 @@ class _CartOverlayState extends State<CartOverlay> {
               Expanded(
                 child: ElevatedButton.icon(
                   onPressed: widget.cart.isEmpty || widget.selectedTable == null
-                      ? null
+                      ? () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                widget.cart.isEmpty
+                                    ? 'Add items to cart first'
+                                    : 'Please select a table',
+                              ),
+                              backgroundColor: Colors.red[700],
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                        }
                       : widget.onPlaceOrder,
                   icon: const Icon(Icons.send, size: 18),
                   label: const Text('SEND TO KITCHEN'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green[700],
+                    backgroundColor:
+                        widget.cart.isEmpty || widget.selectedTable == null
+                            ? Colors.grey[700]
+                            : Colors.green[700],
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12)),
