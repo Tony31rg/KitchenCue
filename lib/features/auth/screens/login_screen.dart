@@ -162,12 +162,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 32),
-                  const Text(
-                    'Developed by Figma\'s Code',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.grey, fontSize: 12),
-                  ),
                   const SizedBox(height: 24),
                 ],
               ),

@@ -204,7 +204,7 @@ class AppState extends ChangeNotifier {
   }
 
   static List<MenuItem> _seedMenuItems() {
-    return const <MenuItem>[
+    return <MenuItem>[
       MenuItem(
         id: '1',
         name: 'Special Cake',
