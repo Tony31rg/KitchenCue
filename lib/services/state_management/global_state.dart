@@ -6,15 +6,22 @@ import '../../models/kitchen_status.dart';
 import '../../models/menu_item.dart';
 import '../../models/order.dart';
 import '../../models/restaurant_table.dart';
-
-enum UserRole { waiter, chef }
+import '../../models/user_role.dart';
 
 class AppState extends ChangeNotifier {
   AppState();
 
   UserRole? userRole;
   String waiterName = '';
+
+  // Kitchen capacity system (PRD Section 6.4)
+  KitchenCapacity kitchenCapacity = KitchenCapacity.low;
+  KitchenCapacityParams kitchenParams = const KitchenCapacityParams();
+
+  // Keep legacy for backwards compatibility
+  @Deprecated('Use kitchenCapacity instead')
   KitchenStatus kitchenStatus = KitchenStatus.ready;
+
   int? selectedTableNumber;
 
   final List<MenuItem> _menuItems = _seedMenuItems();
@@ -29,7 +36,38 @@ class AppState extends ChangeNotifier {
   UnmodifiableListView<RestaurantTable> get tables =>
       UnmodifiableListView(_tables);
 
-  bool get isKitchenBusy => kitchenStatus.isBusy;
+  /// Whether kitchen is busy (high or critical capacity)
+  bool get isKitchenBusy => kitchenCapacity.isBusy;
+
+  /// Get current capacity percentage
+  double get capacityPercent {
+    final pendingOrders = _orders
+        .where((o) =>
+            o.status == OrderStatus.pending ||
+            o.status == OrderStatus.acknowledged ||
+            o.status == OrderStatus.inProgress)
+        .toList();
+
+    int totalPrepTime = 0;
+    for (final order in pendingOrders) {
+      for (final item in order.items) {
+        totalPrepTime += item.menuItem.avgPrepTime * item.quantity;
+      }
+    }
+    return kitchenParams.calculateCapacityPercent(
+        pendingOrders.length, totalPrepTime);
+  }
+
+  /// Estimated wait time in minutes
+  int get estimatedWaitTime {
+    final pendingCount = _orders
+        .where((o) =>
+            o.status == OrderStatus.pending ||
+            o.status == OrderStatus.acknowledged ||
+            o.status == OrderStatus.inProgress)
+        .length;
+    return kitchenParams.estimateWaitTime(pendingCount);
+  }
 
   List<String> get categories {
     final set = _menuItems.map((item) => item.category).toSet().toList();
@@ -106,13 +144,35 @@ class AppState extends ChangeNotifier {
 
   void addOrder(Order order) {
     _orders.add(order);
+    _recalculateCapacity();
     notifyListeners();
   }
 
+  /// Update order status with appropriate timestamps (PRD US-005, US-007)
   void updateOrderStatus(String orderId, OrderStatus status) {
     final index = _orders.indexWhere((order) => order.id == orderId);
     if (index == -1) return;
-    _orders[index] = _orders[index].copyWith(status: status);
+
+    final now = DateTime.now();
+    Order updated = _orders[index].copyWith(status: status);
+
+    // Set appropriate timestamp based on status
+    switch (status) {
+      case OrderStatus.acknowledged:
+        updated = updated.copyWith(acknowledgedAt: now);
+        break;
+      case OrderStatus.ready:
+        updated = updated.copyWith(readyAt: now);
+        break;
+      case OrderStatus.served:
+        updated = updated.copyWith(servedAt: now);
+        break;
+      default:
+        break;
+    }
+
+    _orders[index] = updated;
+    _recalculateCapacity();
     notifyListeners();
   }
 
@@ -125,6 +185,66 @@ class AppState extends ChangeNotifier {
     kitchenStatus = kitchenStatus == KitchenStatus.busy
         ? KitchenStatus.ready
         : KitchenStatus.busy;
+    notifyListeners();
+  }
+
+  /// Set kitchen capacity level directly
+  void setKitchenCapacity(KitchenCapacity capacity) {
+    kitchenCapacity = capacity;
+    notifyListeners();
+  }
+
+  /// Update kitchen capacity parameters (PRD US-009)
+  void setKitchenParams(KitchenCapacityParams params) {
+    kitchenParams = params;
+    _recalculateCapacity();
+    notifyListeners();
+  }
+
+  /// Recalculate capacity based on current orders
+  void _recalculateCapacity() {
+    kitchenCapacity = kitchenParams.getCapacityLevel(capacityPercent);
+  }
+
+  /// 86 an item (mark as sold out) - PRD US-002
+  void set86Item(String itemId, bool is86d) {
+    final index = _menuItems.indexWhere((item) => item.id == itemId);
+    if (index == -1) return;
+    _menuItems[index] = _menuItems[index].copyWith(is86d: is86d);
+    notifyListeners();
+    // TODO: Send push notification to all devices
+  }
+
+  /// Get list of 86'd items
+  List<MenuItem> get soldOutItems =>
+      _menuItems.where((item) => item.is86d || item.stock == 0).toList();
+
+  /// Cancel an order with reason (PRD US-004)
+  void cancelOrder(String orderId, String reason) {
+    final index = _orders.indexWhere((order) => order.id == orderId);
+    if (index == -1) return;
+    final order = _orders[index];
+
+    // Only return stock if not yet in progress
+    if (order.status == OrderStatus.pending ||
+        order.status == OrderStatus.acknowledged) {
+      for (final item in order.items) {
+        final menuIndex =
+            _menuItems.indexWhere((m) => m.id == item.menuItem.id);
+        if (menuIndex != -1) {
+          _menuItems[menuIndex] = _menuItems[menuIndex].copyWith(
+            stock: _menuItems[menuIndex].stock + item.quantity,
+          );
+        }
+      }
+    }
+
+    _orders[index] = order.copyWith(
+      status: OrderStatus.cancelled,
+      cancelledAt: DateTime.now(),
+      cancellationReason: reason,
+    );
+    _recalculateCapacity();
     notifyListeners();
   }
 

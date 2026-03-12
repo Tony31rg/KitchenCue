@@ -22,25 +22,32 @@ class _KitchenQueueScreenState extends State<KitchenQueueScreen> {
     final orders = state.orders.toList()
       ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
 
+    // Filter out served and cancelled orders from main view
+    final activeOrders = orders
+        .where((o) =>
+            o.status != OrderStatus.served && o.status != OrderStatus.cancelled)
+        .toList();
+
     final filtered = _filter == null
-        ? orders
-        : orders.where((o) => o.status == _filter).toList();
+        ? activeOrders
+        : activeOrders.where((o) => o.status == _filter).toList();
 
     final pending = orders.where((o) => o.status == OrderStatus.pending).length;
-    final preparing =
-        orders.where((o) => o.status == OrderStatus.preparing).length;
-    final completed =
-        orders.where((o) => o.status == OrderStatus.completed).length;
+    final acknowledged =
+        orders.where((o) => o.status == OrderStatus.acknowledged).length;
+    final inProgress =
+        orders.where((o) => o.status == OrderStatus.inProgress).length;
+    final ready = orders.where((o) => o.status == OrderStatus.ready).length;
 
     return Scaffold(
       backgroundColor: const Color(0xFF1A1A1A),
       body: Column(
         children: [
           KitchenHeader(
-            totalOrders: orders.length,
-            pendingCount: pending,
-            preparingCount: preparing,
-            completedCount: completed,
+            totalOrders: activeOrders.length,
+            pendingCount: pending + acknowledged,
+            preparingCount: inProgress,
+            completedCount: ready,
           ),
           _buildFilterBar(),
           Expanded(
@@ -71,36 +78,46 @@ class _KitchenQueueScreenState extends State<KitchenQueueScreen> {
     return Container(
       color: const Color(0xFF1A1A1A),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      child: Row(
-        children: [
-          FilterButton(
-            label: 'All Orders',
-            active: _filter == null,
-            color: const Color(0xFFFF9800),
-            onTap: () => setState(() => _filter = null),
-          ),
-          const SizedBox(width: 8),
-          FilterButton(
-            label: 'Pending',
-            active: _filter == OrderStatus.pending,
-            color: const Color(0xFFFF9800),
-            onTap: () => setState(() => _filter = OrderStatus.pending),
-          ),
-          const SizedBox(width: 8),
-          FilterButton(
-            label: 'Preparing',
-            active: _filter == OrderStatus.preparing,
-            color: const Color(0xFF42A5F5),
-            onTap: () => setState(() => _filter = OrderStatus.preparing),
-          ),
-          const SizedBox(width: 8),
-          FilterButton(
-            label: 'Completed',
-            active: _filter == OrderStatus.completed,
-            color: const Color(0xFF66BB6A),
-            onTap: () => setState(() => _filter = OrderStatus.completed),
-          ),
-        ],
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            FilterButton(
+              label: 'All',
+              active: _filter == null,
+              color: const Color(0xFFFF9800),
+              onTap: () => setState(() => _filter = null),
+            ),
+            const SizedBox(width: 8),
+            FilterButton(
+              label: 'Pending',
+              active: _filter == OrderStatus.pending,
+              color: const Color(0xFFFF9800),
+              onTap: () => setState(() => _filter = OrderStatus.pending),
+            ),
+            const SizedBox(width: 8),
+            FilterButton(
+              label: 'Acknowledged',
+              active: _filter == OrderStatus.acknowledged,
+              color: const Color(0xFF9C27B0),
+              onTap: () => setState(() => _filter = OrderStatus.acknowledged),
+            ),
+            const SizedBox(width: 8),
+            FilterButton(
+              label: 'In Progress',
+              active: _filter == OrderStatus.inProgress,
+              color: const Color(0xFF42A5F5),
+              onTap: () => setState(() => _filter = OrderStatus.inProgress),
+            ),
+            const SizedBox(width: 8),
+            FilterButton(
+              label: 'Ready',
+              active: _filter == OrderStatus.ready,
+              color: const Color(0xFF66BB6A),
+              onTap: () => setState(() => _filter = OrderStatus.ready),
+            ),
+          ],
+        ),
       ),
     );
   }

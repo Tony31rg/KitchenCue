@@ -15,23 +15,22 @@ class KitchenOrderCard extends StatelessWidget {
   Color get _statusColor {
     switch (order.status) {
       case OrderStatus.pending:
-        return const Color(0xFFFF9800);
-      case OrderStatus.preparing:
-        return const Color(0xFF42A5F5);
-      case OrderStatus.completed:
-        return const Color(0xFF66BB6A);
+        return const Color(0xFFFF9800); // Orange
+      case OrderStatus.acknowledged:
+        return const Color(0xFF9C27B0); // Purple
+      case OrderStatus.inProgress:
+        return const Color(0xFF42A5F5); // Blue
+      case OrderStatus.ready:
+        return const Color(0xFF66BB6A); // Green
+      case OrderStatus.served:
+        return const Color(0xFF4CAF50); // Dark Green
+      case OrderStatus.cancelled:
+        return const Color(0xFF9E9E9E); // Grey
     }
   }
 
   String get _statusLabel {
-    switch (order.status) {
-      case OrderStatus.pending:
-        return 'PENDING';
-      case OrderStatus.preparing:
-        return 'PREPARING';
-      case OrderStatus.completed:
-        return 'COMPLETED';
-    }
+    return order.status.displayName.toUpperCase();
   }
 
   String _timeSince(DateTime dt) {
@@ -126,31 +125,57 @@ class KitchenOrderCard extends StatelessWidget {
   }
 
   Widget _buildActionButton() {
-    if (order.status == OrderStatus.pending) {
-      return ElevatedButton(
-        onPressed: () => onStatusChange(OrderStatus.preparing),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF42A5F5),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
+    switch (order.status) {
+      case OrderStatus.pending:
+        return ElevatedButton(
+          onPressed: () => onStatusChange(OrderStatus.acknowledged),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF9C27B0),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
           ),
-        ),
-        child: const Text('Start Preparing'),
-      );
-    } else if (order.status == OrderStatus.preparing) {
-      return ElevatedButton.icon(
-        onPressed: () => onStatusChange(OrderStatus.completed),
-        icon: const Icon(Icons.check_circle_outline, size: 18),
-        label: const Text('Mark Complete'),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF66BB6A),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
+          child: const Text('Acknowledge'),
+        );
+      case OrderStatus.acknowledged:
+        return ElevatedButton(
+          onPressed: () => onStatusChange(OrderStatus.inProgress),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF42A5F5),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
           ),
-        ),
-      );
+          child: const Text('Start Cooking'),
+        );
+      case OrderStatus.inProgress:
+        return ElevatedButton.icon(
+          onPressed: () => onStatusChange(OrderStatus.ready),
+          icon: const Icon(Icons.check_circle_outline, size: 18),
+          label: const Text('Mark Ready'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF66BB6A),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+        );
+      case OrderStatus.ready:
+        return ElevatedButton.icon(
+          onPressed: () => onStatusChange(OrderStatus.served),
+          icon: const Icon(Icons.restaurant, size: 18),
+          label: const Text('Mark Served'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF4CAF50),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+        );
+      case OrderStatus.served:
+      case OrderStatus.cancelled:
+        return const SizedBox.shrink();
     }
-    return const SizedBox.shrink();
   }
 
   Widget _buildItemChips() {
@@ -174,33 +199,62 @@ class _OrderItemChip extends StatelessWidget {
         color: const Color(0xFF1A1A1A),
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            item.menuItem.name,
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w500,
-            ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                item.menuItem.name,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFF9800).withValues(alpha: 0.18),
+                  border: Border.all(color: const Color(0xFFFF9800)),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  'x${item.quantity}',
+                  style: const TextStyle(
+                    color: Color(0xFFFF9800),
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFF9800).withValues(alpha: 0.18),
-              border: Border.all(color: const Color(0xFFFF9800)),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Text(
-              'x${item.quantity}',
-              style: const TextStyle(
-                color: Color(0xFFFF9800),
+          // Show modifiers if present (PRD US-003)
+          if (item.modifiers.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              '→ ${item.modifiers.join(", ")}',
+              style: TextStyle(
+                color: Colors.orange[300],
                 fontSize: 11,
-                fontWeight: FontWeight.bold,
+                fontStyle: FontStyle.italic,
               ),
             ),
-          ),
+          ],
+          // Show notes if present
+          if (item.notes != null && item.notes!.isNotEmpty) ...[
+            const SizedBox(height: 2),
+            Text(
+              '📝 ${item.notes}',
+              style: const TextStyle(
+                color: Colors.grey,
+                fontSize: 10,
+              ),
+            ),
+          ],
         ],
       ),
     );

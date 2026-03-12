@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/route_constants.dart';
+import '../../../models/user_role.dart';
 import '../../../services/state_management/global_state.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -35,7 +36,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _handleChef() {
     final appState = AppStateScope.of(context);
-    appState.setUserRole(UserRole.chef);
+    appState.setUserRole(UserRole.kitchen);
     appState.setWaiterName('');
     context.go(RouteConstants.kitchenQueue);
   }

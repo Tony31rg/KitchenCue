@@ -147,7 +147,12 @@ class _MenuDashboardScreenState extends State<MenuDashboardScreen> {
                 onCartTap: () => setState(() => _showCart = true),
               ),
               if (state.isKitchenBusy)
-                const SliverToBoxAdapter(child: BusyBanner()),
+                SliverToBoxAdapter(
+                  child: BusyBanner(
+                    capacity: state.kitchenCapacity,
+                    estimatedWaitTime: state.estimatedWaitTime,
+                  ),
+                ),
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
                 sliver: SliverList(

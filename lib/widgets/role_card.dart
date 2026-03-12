@@ -93,7 +93,7 @@ class RoleCard extends StatelessWidget {
             Text(
               role.description,
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 14,
                 color: _RestoSyncTheme.darkGrey,
               ),
