@@ -112,8 +112,22 @@ flutter build ios
 
 ## Current App Flow
 
-1. **Login Screen** (`/login`) - Entry point with role selection
+1. **Login Screen** (`/login`) - Entry point with role selection, name, and role PIN
 2. **Menu Dashboard** (`/dashboard`) - Waiter view for menu items with stock badges
+
+## Staff Login PINs
+
+The app currently uses fixed role-based PINs for quick internal access:
+
+- **Waiter PIN:** `1111`
+- **Chef PIN:** `2580`
+
+How login works:
+
+1. Choose role (`I AM A WAITER` or `I AM KITCHEN STAFF`)
+2. Enter staff name
+3. Enter role PIN
+4. Tap the selected role button (or press Enter) to continue
 
 ## Troubleshooting
 

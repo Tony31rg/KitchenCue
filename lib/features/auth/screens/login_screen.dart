@@ -13,19 +13,34 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _pinController = TextEditingController();
+  static const String _waiterPin = '1111';
+  static const String _chefPin = '2580';
   UserRole? _selectedRole;
 
   @override
   void dispose() {
     _nameController.dispose();
+    _pinController.dispose();
     super.dispose();
   }
 
   void _handleWaiter() {
     final appState = AppStateScope.of(context);
     final name = _nameController.text.trim();
+    final pin = _pinController.text.trim();
     if (name.isEmpty) {
       setState(() => _selectedRole = UserRole.waiter);
+      return;
+    }
+    if (pin != _waiterPin) {
+      setState(() => _selectedRole = UserRole.waiter);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Invalid waiter PIN'),
+          backgroundColor: Colors.red,
+        ),
+      );
       return;
     }
     appState.setUserRole(UserRole.waiter);
@@ -35,14 +50,30 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _handleChef() {
     final appState = AppStateScope.of(context);
+    final name = _nameController.text.trim();
+    final pin = _pinController.text.trim();
+    if (name.isEmpty) {
+      setState(() => _selectedRole = UserRole.chef);
+      return;
+    }
+    if (pin != _chefPin) {
+      setState(() => _selectedRole = UserRole.chef);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Invalid chef PIN'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
     appState.setUserRole(UserRole.chef);
-    appState.setWaiterName('');
+    appState.setWaiterName(name);
     context.go(RouteConstants.kitchenQueue);
   }
 
   @override
   Widget build(BuildContext context) {
-    final showNameField = _selectedRole == UserRole.waiter;
+    final showCredentialsInputs = _selectedRole != null;
 
     return Scaffold(
       body: SafeArea(
@@ -98,13 +129,17 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                   const SizedBox(height: 32),
-                  if (showNameField) ...[
+                  if (showCredentialsInputs) ...[
                     TextField(
                       controller: _nameController,
                       autofocus: true,
-                      onSubmitted: (_) => _handleWaiter(),
+                      onSubmitted: (_) => _selectedRole == UserRole.chef
+                          ? _handleChef()
+                          : _handleWaiter(),
                       decoration: InputDecoration(
-                        hintText: 'Enter your name',
+                        hintText: _selectedRole == UserRole.chef
+                            ? 'Enter chef name'
+                            : 'Enter waiter name',
                         hintStyle: const TextStyle(color: Color(0xFF8C8C8C)),
                         filled: true,
                         fillColor: const Color(0xFF242424),
@@ -122,9 +157,43 @@ class _LoginScreenState extends State<LoginScreen> {
                       style: const TextStyle(color: Colors.white),
                     ),
                     const SizedBox(height: 24),
+                    TextField(
+                      controller: _pinController,
+                      obscureText: true,
+                      keyboardType: TextInputType.number,
+                      onSubmitted: (_) => _selectedRole == UserRole.chef
+                          ? _handleChef()
+                          : _handleWaiter(),
+                      decoration: InputDecoration(
+                        hintText: _selectedRole == UserRole.chef
+                            ? 'Enter chef PIN'
+                            : 'Enter waiter PIN',
+                        hintStyle: const TextStyle(color: Color(0xFF8C8C8C)),
+                        filled: true,
+                        fillColor: const Color(0xFF242424),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide:
+                              const BorderSide(color: Color(0xFF3A3A3A)),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide:
+                              const BorderSide(color: Color(0xFF42A5F5)),
+                        ),
+                      ),
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                    const SizedBox(height: 24),
                   ],
                   ElevatedButton(
-                    onPressed: _handleWaiter,
+                    onPressed: () {
+                      if (_selectedRole != UserRole.waiter) {
+                        setState(() => _selectedRole = UserRole.waiter);
+                        return;
+                      }
+                      _handleWaiter();
+                    },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFFF9800),
                       padding: const EdgeInsets.symmetric(vertical: 16),
@@ -144,7 +213,13 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 14),
                   ElevatedButton(
-                    onPressed: _handleChef,
+                    onPressed: () {
+                      if (_selectedRole != UserRole.chef) {
+                        setState(() => _selectedRole = UserRole.chef);
+                        return;
+                      }
+                      _handleChef();
+                    },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF2E7D32),
                       padding: const EdgeInsets.symmetric(vertical: 16),

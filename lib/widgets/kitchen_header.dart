@@ -31,11 +31,11 @@ class KitchenHeader extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
+                    const Text(
                       'KITCHENCUE',
                       style: TextStyle(
                         color: Colors.white,
@@ -45,8 +45,10 @@ class KitchenHeader extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      'Kitchen Admin',
-                      style: TextStyle(color: Colors.grey, fontSize: 13),
+                      state.waiterName.isEmpty
+                          ? 'Kitchen Staff'
+                          : 'Chef: ${state.waiterName}',
+                      style: const TextStyle(color: Colors.grey, fontSize: 13),
                     ),
                   ],
                 ),
