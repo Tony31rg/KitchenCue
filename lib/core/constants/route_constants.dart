@@ -4,6 +4,7 @@ class RouteConstants {
   RouteConstants._();
 
   // Route paths
+  static const String landing = '/';
   static const String login = '/login';
   static const String dashboard = '/dashboard';
   static const String orderDetail = '/order-detail';
@@ -11,6 +12,7 @@ class RouteConstants {
   static const String kitchenStatus = '/kitchen-status';
 
   // Route names (for named navigation)
+  static const String landingName = 'landing';
   static const String loginName = 'login';
   static const String dashboardName = 'dashboard';
   static const String orderDetailName = 'orderDetail';

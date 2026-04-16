@@ -1,4 +1,18 @@
-2026/03/25-14:51:34.402 6698 Reusing MANIFEST C:\Users\tonyj\AppData\Local\Temp\flutter_tools.6b452ed\flutter_tools_chrome_device.e5d7f039\Default\Site Characteristics Database/MANIFEST-000001
-2026/03/25-14:51:34.404 6698 Recovering log #6
-2026/03/25-14:51:34.404 6698 Reusing old log C:\Users\tonyj\AppData\Local\Temp\flutter_tools.6b452ed\flutter_tools_chrome_device.e5d7f039\Default\Site Characteristics Database/000006.log 
-2026/03/25-14:51:34.408 6698 Delete type=0 #3
+2026/04/16-15:02:57.455 66f4 Reusing MANIFEST C:\Users\tonyj\AppData\Local\Temp\flutter_tools.b275c9a0\flutter_tools_chrome_device.1ba71910\Default\Site Characteristics Database/MANIFEST-000001
+2026/04/16-15:02:57.456 66f4 Recovering log #3
+2026/04/16-15:02:57.456 66f4 Level-0 table #19: started
+2026/04/16-15:02:57.461 66f4 Level-0 table #19: 318 bytes OK
+2026/04/16-15:02:57.461 66f4 Recovering log #6
+2026/04/16-15:02:57.461 66f4 Level-0 table #20: started
+2026/04/16-15:02:57.465 66f4 Level-0 table #20: 234 bytes OK
+2026/04/16-15:02:57.465 66f4 Recovering log #10
+2026/04/16-15:02:57.465 66f4 Level-0 table #21: started
+2026/04/16-15:02:57.469 66f4 Level-0 table #21: 165 bytes OK
+2026/04/16-15:02:57.469 66f4 Recovering log #16
+2026/04/16-15:02:57.470 66f4 Reusing old log C:\Users\tonyj\AppData\Local\Temp\flutter_tools.b275c9a0\flutter_tools_chrome_device.1ba71910\Default\Site Characteristics Database/000016.log 
+2026/04/16-15:02:57.472 66f4 Delete type=0 #3
+2026/04/16-15:02:57.472 66f4 Delete type=2 #4
+2026/04/16-15:02:57.472 66f4 Delete type=2 #6
+2026/04/16-15:02:57.472 66f4 Delete type=0 #6
+2026/04/16-15:02:57.472 66f4 Delete type=0 #10
+2026/04/16-15:02:57.472 66f4 Delete type=2 #11

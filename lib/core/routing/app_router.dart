@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../constants/route_constants.dart';
+import '../../features/auth/screens/landing_screen.dart';
 import '../../features/auth/screens/login_screen.dart';
 import '../../features/menu_dashboard/screens/menu_dashboard_screen.dart';
 import '../../features/order_management/screens/order_detail_screen.dart';
@@ -20,10 +21,15 @@ class AppRouter {
   static GoRouter create(AppState appState) {
     return GoRouter(
       navigatorKey: _rootNavigatorKey,
-      initialLocation: RouteConstants.login,
+      initialLocation: RouteConstants.landing,
       debugLogDiagnostics: true,
       refreshListenable: appState,
       routes: [
+        GoRoute(
+          path: RouteConstants.landing,
+          name: RouteConstants.landingName,
+          builder: (context, state) => const LandingScreen(),
+        ),
         GoRoute(
           path: RouteConstants.login,
           name: RouteConstants.loginName,
