@@ -1,4 +1,5 @@
-import 'package:cloud_functions/cloud_functions.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../models/staff_member.dart';
 
@@ -13,55 +14,168 @@ class StaffLoginResult {
 }
 
 class StaffAuthService {
-  StaffAuthService({FirebaseFunctions? functions})
-      : _functions = functions ?? FirebaseFunctions.instance;
+  StaffAuthService({
+    FirebaseAuth? auth,
+    FirebaseFirestore? firestore,
+  })  : _auth = auth ?? FirebaseAuth.instance,
+        _firestore = firestore ?? FirebaseFirestore.instance;
 
-  final FirebaseFunctions _functions;
+  final FirebaseAuth _auth;
+  final FirebaseFirestore _firestore;
+
+  static const String _defaultDomain = 'kitchencue.com';
+
+  static String _normalizeLoginEmail(String input) {
+    final raw = input.trim().toLowerCase();
+    final localPart = raw.split('@').first.trim();
+    return '$localPart@$_defaultDomain';
+  }
+
+  static bool _isAllowedRole(String role) {
+    return role == 'waiter' || role == 'kitchen';
+  }
+
+  Future<StaffLoginResult?> restoreSession() async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      return null;
+    }
+
+    final userDoc = await _firestore.collection('users').doc(user.uid).get();
+    if (!userDoc.exists) {
+      await _auth.signOut();
+      return null;
+    }
+
+    final data = userDoc.data() ?? <String, dynamic>{};
+    final role = (data['role'] ?? '').toString().toLowerCase();
+    final isActive = data['active'] as bool? ?? true;
+    if (!isActive || !_isAllowedRole(role)) {
+      await _auth.signOut();
+      return null;
+    }
+
+    final name = (data['name'] ?? '').toString().trim();
+    final fallback = user.email?.split('@').first ?? 'Staff';
+    final mapped = <String, dynamic>{
+      'id': user.uid,
+      'displayName': name.isEmpty ? fallback : name,
+      'role': role,
+      'active': isActive,
+      'mustResetPin': data['mustResetPin'] as bool? ?? false,
+    };
+    final token = await user.getIdToken();
+
+    return StaffLoginResult(
+      staff: StaffMember.fromMap(mapped),
+      sessionToken: token ?? '',
+    );
+  }
 
   Future<StaffLoginResult> loginWithPin({
     required String displayName,
     required String pin,
     required String deviceInfo,
   }) async {
-    final callable = _functions.httpsCallable('staffPinLogin');
-    final result = await callable.call(<String, dynamic>{
-      'displayName': displayName,
-      'pin': pin,
-      'deviceInfo': deviceInfo,
-    });
+    final email = _normalizeLoginEmail(displayName);
 
-    final data = Map<String, dynamic>.from(result.data as Map);
-    final staff = StaffMember.fromMap(
-      Map<String, dynamic>.from(data['staff'] as Map),
-    );
+    try {
+      final credential = await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: pin,
+      );
 
-    return StaffLoginResult(
-      staff: staff,
-      sessionToken: data['sessionToken'] as String? ?? '',
-    );
+      final user = credential.user;
+      if (user == null) {
+        throw FirebaseAuthException(
+          code: 'user-not-found',
+          message: 'Invalid credentials.',
+        );
+      }
+
+      final userDoc = await _firestore.collection('users').doc(user.uid).get();
+      if (!userDoc.exists) {
+        await _auth.signOut();
+        throw FirebaseAuthException(
+          code: 'permission-denied',
+          message: 'No user profile found for this account.',
+        );
+      }
+
+      final data = userDoc.data() ?? <String, dynamic>{};
+      final role = (data['role'] ?? '').toString().toLowerCase();
+      final isActive = data['active'] as bool? ?? true;
+
+      if (!isActive) {
+        await _auth.signOut();
+        throw FirebaseAuthException(
+          code: 'permission-denied',
+          message: 'Staff account is inactive.',
+        );
+      }
+
+      if (!_isAllowedRole(role)) {
+        await _auth.signOut();
+        throw FirebaseAuthException(
+          code: 'permission-denied',
+          message: 'Only waiter and kitchen staff can log in.',
+        );
+      }
+
+      final name = (data['name'] ?? '').toString().trim();
+      final mapped = <String, dynamic>{
+        'id': user.uid,
+        'displayName': name.isEmpty ? displayName : name,
+        'role': role,
+        'active': isActive,
+        'mustResetPin': data['mustResetPin'] as bool? ?? false,
+      };
+
+      final staff = StaffMember.fromMap(mapped);
+      final idToken = await user.getIdToken();
+
+      return StaffLoginResult(
+        staff: staff,
+        sessionToken: idToken ?? '',
+      );
+    } on FirebaseAuthException {
+      rethrow;
+    } on FirebaseException {
+      rethrow;
+    } catch (_) {
+      throw FirebaseAuthException(
+        code: 'internal-error',
+        message: 'Unable to sign in right now. Please try again.',
+      );
+    }
   }
 
   Future<void> changeMyPin({
-    required String sessionToken,
     required String currentPin,
     required String newPin,
   }) async {
-    final callable = _functions.httpsCallable('changeMyPin');
-    await callable.call(<String, dynamic>{
-      'sessionToken': sessionToken,
-      'currentPin': currentPin,
-      'newPin': newPin,
-    });
-  }
+    final user = _auth.currentUser;
+    if (user == null || user.email == null) {
+      throw FirebaseAuthException(
+        code: 'requires-recent-login',
+        message: 'Please log in again before changing PIN.',
+      );
+    }
 
-  Future<void> bootstrapOwner({
-    required String displayName,
-    required String pin,
-  }) async {
-    final callable = _functions.httpsCallable('bootstrapOwner');
-    await callable.call(<String, dynamic>{
-      'displayName': displayName,
-      'pin': pin,
-    });
+    final credential = EmailAuthProvider.credential(
+      email: user.email!,
+      password: currentPin,
+    );
+
+    await user.reauthenticateWithCredential(credential);
+    await user.updatePassword(newPin);
+
+    await _firestore.collection('users').doc(user.uid).set(
+      {
+        'mustResetPin': false,
+        'updatedAt': FieldValue.serverTimestamp(),
+      },
+      SetOptions(merge: true),
+    );
   }
 }

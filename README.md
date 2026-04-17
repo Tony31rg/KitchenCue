@@ -1,176 +1,129 @@
 # KitchenCue
 
-A real-time inventory and order management system that prevents waiters from double-selling out-of-stock items and alerts them when the kitchen is at maximum capacity.
+KitchenCue is a real-time restaurant workflow app with two staff roles:
 
-## Problem Statement
+- Waiter
+- Kitchen staff
 
-Waiters face the embarrassment of telling a customer their meal isn't available after the order was already taken because the kitchen hadn't updated the stock levels or was too busy to keep up.
+The app uses Firebase Authentication and Firestore to sign in staff with pseudo-emails and role-based routing.
 
-## Solution
+## Current Architecture
 
-KitchenCue provides a shared digital dashboard where stock counts decrease instantly as orders are placed, and the kitchen can "pause" new incoming orders if they are overwhelmed.
+- Frontend: Flutter
+- Navigation: GoRouter
+- State: AppState (in-memory session for current runtime)
+- Auth: Firebase Auth (email/password)
+- Role profile: Firestore users collection
+- Backend: No Cloud Functions required for login flow
 
-## Core Features (MVP)
+## Role and Login Model
 
-1. **Live Stock Counter** - Tracks and displays current item quantities in real-time
-2. **Kitchen "Busy" Mode** - Status toggle for chefs to alert waitstaff of delays
-3. **Order Queue** - Lists incoming orders with millisecond-accurate timestamps
+Staff accounts use pseudo-email IDs, for example:
 
-## Tech Stack
+- w01@kitchencue.com (waiter)
+- c01@kitchencue.com (kitchen)
 
-- **Framework**: Flutter
-- **State Management**: Global State (liveInventoryCount, kitchenStatus)
-- **Navigation**: GoRouter
-- **Architecture**: Feature-based folder structure
-- **Backend**: Firebase (planned)
+In the login screen, staff can enter either full email or short ID:
 
-## Project Structure
+- w01
+- w01@kitchencue.com
 
-```
-lib/
-├── main.dart                    # App entry point
-├── core/
-│   ├── constants/
-│   │   └── route_constants.dart # Navigation path constants
-│   ├── routing/
-│   │   └── app_router.dart      # GoRouter configuration
-│   ├── theme/
-│   ├── utils/
-│   └── widgets/
-├── features/
-│   ├── auth/
-│   │   └── screens/
-│   │       └── login_screen.dart
-│   ├── menu_dashboard/
-│   │   └── screens/
-│   │       └── menu_dashboard_screen.dart
-│   ├── order_management/
-│   │   └── screens/
-│   │       └── order_detail_screen.dart
-│   └── kitchen_queue/
-│       └── screens/
-│           ├── kitchen_queue_screen.dart
-│           └── kitchen_status_screen.dart
-├── models/
-│   ├── menu_item.dart
-│   ├── order.dart
-│   └── kitchen_status.dart
-└── services/
-    ├── firebase/
-    └── state_management/
-        └── global_state.dart
-```
+Password is the staff PIN/password managed by Firebase Auth.
 
-## Prerequisites
+After login:
 
-- [Flutter SDK](https://docs.flutter.dev/get-started/install) (3.0.0 or higher)
-- Android Studio / VS Code with Flutter extensions
-- An Android emulator, iOS simulator, or physical device
+- waiter -> dashboard
+- kitchen -> kitchen queue
 
-## Getting Started
+## Firebase Setup (Required)
 
-### 1. Clone/Navigate to the project
+1. Open Firebase Console for project kitchencue-a4d6d.
+2. Authentication -> Sign-in method -> enable Email/Password.
+3. Create staff auth users (example: w01@kitchencue.com, c01@kitchencue.com).
+4. Copy each user UID from Authentication.
+5. Firestore -> create collection users.
+6. For each auth user, create users/{uid} document where document ID equals auth UID.
+7. Add fields:
+    - name (string)
+    - role (string: waiter or kitchen)
+    - active (bool)
+    - mustResetPin (bool)
+    - createdAt (timestamp)
+    - updatedAt (timestamp)
 
-```bash
-cd "t:\Mini Project"
-```
+Important:
 
-### 2. Install dependencies
+- role must be waiter or kitchen.
+- If users/{uid} document is missing, login is rejected.
 
-```bash
+## Firestore Rules
+
+Rules are configured in firestore.rules with these constraints:
+
+- users/{uid} can only be read and updated by that same authenticated uid.
+- Role is restricted to waiter or kitchen.
+- Role cannot be changed by the client after create.
+
+Deploy rules with:
+
+firebase deploy --only firestore:rules
+
+On Windows PowerShell with script policy restrictions, use:
+
+firebase.cmd deploy --only firestore:rules
+
+## Run Locally
+
+1. Install Flutter dependencies:
+
 flutter pub get
-```
 
-### 3. Run the app
+2. Run on Chrome:
 
-**On connected device/emulator:**
-```bash
-flutter run
-```
-
-**On Chrome (Web):**
-```bash
 flutter run -d chrome
-```
 
-**On Windows:**
-```bash
+3. Run on Windows desktop:
+
 flutter run -d windows
-```
 
-### 4. Build for release
+## Main App Flow
 
-**Android APK:**
-```bash
-flutter build apk
-```
+1. Landing screen
+2. Login screen
+3. Role-based redirect:
+    - waiter -> menu dashboard
+    - kitchen -> kitchen queue
 
-**iOS:**
-```bash
-flutter build ios
-```
+Existing session restore:
 
-## Current App Flow
+- On app startup, current Firebase user is checked.
+- If valid users/{uid} role profile exists and active is true, app restores session and routes automatically.
 
-1. **Login Screen** (`/login`) - Entry point with role selection, name, and role PIN
-2. **Menu Dashboard** (`/dashboard`) - Waiter view for menu items with stock badges
+## Commands
 
-## Staff Login PINs
-
-The app currently uses fixed role-based PINs for quick internal access:
-
-- **Waiter PIN:** `1111`
-- **Chef PIN:** `2580`
-
-How login works:
-
-1. Choose role (`I AM A WAITER` or `I AM KITCHEN STAFF`)
-2. Enter staff name
-3. Enter role PIN
-4. Tap the selected role button (or press Enter) to continue
+- flutter pub get
+- flutter run -d chrome
+- flutter run -d windows
+- flutter analyze
+- flutter test
 
 ## Troubleshooting
 
-### "flutter" command not found
-Ensure Flutter is installed and added to your PATH:
-```bash
-# Check Flutter installation
-flutter doctor
-```
+Login failed with permission-denied:
 
-### Dependencies not resolving
-Try cleaning and re-fetching:
-```bash
-flutter clean
-flutter pub get
-```
+- Check users/{uid} exists.
+- Check role is waiter or kitchen.
+- Check active is true.
 
-### Hot reload not working
-Press `r` in terminal or save your file. For full restart, press `R`.
+Login failed with invalid-credential:
 
-## Development Commands
+- Check email/ID and password in Firebase Auth.
 
-| Command | Description |
-|---------|-------------|
-| `flutter pub get` | Install dependencies |
-| `flutter run` | Run in debug mode |
-| `flutter run --release` | Run in release mode |
-| `flutter build apk` | Build Android APK |
-| `flutter test` | Run unit tests |
-| `flutter analyze` | Run static analysis |
+Firebase command blocked in PowerShell:
 
-## Next Steps
+- Use firebase.cmd instead of firebase.
 
-- [ ] Implement Firebase integration for real-time sync
-- [ ] Add menu item model with stock tracking
-- [ ] Build Kitchen Queue screen for chefs
-- [ ] Implement "Busy Mode" toggle functionality
-- [ ] Add order timestamp and queue system
+## Project Notes
 
-## License
-
-This project is for educational purposes.
-
----
-
-**KitchenCue** - Never double-book the last serving again!
+- Legacy owner/manager and Cloud Functions login flow were removed.
+- Current app is intentionally two-role only.

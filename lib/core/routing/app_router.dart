@@ -3,7 +3,6 @@ import 'package:go_router/go_router.dart';
 import '../constants/route_constants.dart';
 import '../../features/auth/screens/landing_screen.dart';
 import '../../features/auth/screens/login_screen.dart';
-import '../../features/auth/screens/owner_staff_screen.dart';
 import '../../features/menu_dashboard/screens/menu_dashboard_screen.dart';
 import '../../features/order_management/screens/order_detail_screen.dart';
 import '../../features/kitchen_queue/screens/kitchen_queue_screen.dart';
@@ -26,6 +25,45 @@ class AppRouter {
       initialLocation: RouteConstants.landing,
       debugLogDiagnostics: true,
       refreshListenable: appState,
+      redirect: (context, state) {
+        final role = appState.userRole;
+        final location = state.matchedLocation;
+        final isAuthScreen = location == RouteConstants.landing ||
+            location == RouteConstants.login;
+
+        if (role == null) {
+          final protectedRoutes = <String>{
+            RouteConstants.dashboard,
+            RouteConstants.orderDetail,
+            RouteConstants.kitchenQueue,
+            RouteConstants.kitchenStatus,
+          };
+          if (protectedRoutes.contains(location)) {
+            return RouteConstants.login;
+          }
+          return null;
+        }
+
+        if (isAuthScreen) {
+          return role == UserRole.kitchen
+              ? RouteConstants.kitchenQueue
+              : RouteConstants.dashboard;
+        }
+
+        if (role == UserRole.waiter &&
+            (location == RouteConstants.kitchenQueue ||
+                location == RouteConstants.kitchenStatus)) {
+          return RouteConstants.dashboard;
+        }
+
+        if (role == UserRole.kitchen &&
+            (location == RouteConstants.dashboard ||
+                location == RouteConstants.orderDetail)) {
+          return RouteConstants.kitchenQueue;
+        }
+
+        return null;
+      },
       routes: [
         GoRoute(
           path: RouteConstants.landing,
@@ -77,31 +115,6 @@ class AppRouter {
           path: RouteConstants.kitchenStatus,
           name: RouteConstants.kitchenStatusName,
           builder: (context, state) => const KitchenStatusScreen(),
-        ),
-        GoRoute(
-          path: RouteConstants.ownerStaff,
-          name: RouteConstants.ownerStaffName,
-          builder: (context, state) {
-            if (appState.userRole == UserRole.owner) {
-              return const OwnerStaffScreen();
-            }
-            return Scaffold(
-              body: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text('Owner access required'),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: () =>
-                          GoRouter.of(context).go(RouteConstants.login),
-                      child: const Text('Back to Login'),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
         ),
       ],
       errorBuilder: (context, state) => Scaffold(

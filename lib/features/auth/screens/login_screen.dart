@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../../core/constants/route_constants.dart';
 import '../../../models/user_role.dart';
@@ -28,12 +29,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _login() async {
     final appState = AppStateScope.of(context);
-    final name = _nameController.text.trim();
+    final loginId = _nameController.text.trim();
     final pin = _pinController.text.trim();
-    if (name.isEmpty || pin.isEmpty) {
+    if (loginId.isEmpty || pin.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please enter your staff name and PIN'),
+          content: Text('Please enter staff ID/email and PIN'),
           backgroundColor: Colors.red,
         ),
       );
@@ -44,7 +45,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       final result = await _staffAuthService.loginWithPin(
-        displayName: name,
+        displayName: loginId,
         pin: pin,
         deviceInfo: 'flutter-client',
       );
@@ -58,7 +59,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (!mounted) return;
       if (result.staff.mustResetPin) {
-        await _showChangePinDialog(result.sessionToken, pin);
+        await _showChangePinDialog(pin);
       }
 
       if (!mounted) return;
@@ -69,11 +70,34 @@ class _LoginScreenState extends State<LoginScreen> {
         case UserRole.kitchen:
           context.go(RouteConstants.kitchenQueue);
           break;
-        case UserRole.owner:
-        case UserRole.manager:
-          context.go(RouteConstants.ownerStaff);
-          break;
       }
+    } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
+      String message = 'Invalid credentials.';
+      switch (e.code) {
+        case 'invalid-email':
+          message = 'Enter a valid staff email or ID (e.g. w01).';
+          break;
+        case 'user-not-found':
+        case 'wrong-password':
+        case 'invalid-credential':
+          message = 'Incorrect staff ID/email or PIN.';
+          break;
+        case 'permission-denied':
+          message = e.message ?? 'This account cannot access staff login.';
+          break;
+        case 'too-many-requests':
+          message = 'Too many attempts. Try again later.';
+          break;
+        default:
+          message = e.message ?? 'Login failed. Please try again.';
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.red,
+        ),
+      );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -89,10 +113,7 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  Future<void> _showChangePinDialog(
-    String sessionToken,
-    String currentPin,
-  ) async {
+  Future<void> _showChangePinDialog(String currentPin) async {
     final newPinController = TextEditingController();
     final confirmPinController = TextEditingController();
 
@@ -142,7 +163,6 @@ class _LoginScreenState extends State<LoginScreen> {
               }
 
               await _staffAuthService.changeMyPin(
-                sessionToken: sessionToken,
                 currentPin: currentPin,
                 newPin: newPin,
               );
@@ -150,70 +170,6 @@ class _LoginScreenState extends State<LoginScreen> {
               dialogNavigator.pop();
             },
             child: const Text('Save PIN'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _showBootstrapOwnerDialog() async {
-    final nameController = TextEditingController();
-    final pinController = TextEditingController();
-
-    await showDialog<void>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Setup First Owner'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameController,
-              decoration: const InputDecoration(labelText: 'Owner name'),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: pinController,
-              keyboardType: TextInputType.number,
-              obscureText: true,
-              decoration:
-                  const InputDecoration(labelText: 'Owner PIN (4-8 digits)'),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () async {
-              try {
-                await _staffAuthService.bootstrapOwner(
-                  displayName: nameController.text.trim(),
-                  pin: pinController.text.trim(),
-                );
-                if (!dialogContext.mounted) return;
-                Navigator.of(dialogContext).pop();
-                if (!mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content:
-                        Text('Owner created. Login with owner name and PIN.'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-              } catch (e) {
-                if (!mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Setup failed: $e'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-              }
-            },
-            child: const Text('Create Owner'),
           ),
         ],
       ),
@@ -281,7 +237,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     autofocus: true,
                     onSubmitted: (_) => _login(),
                     decoration: InputDecoration(
-                      hintText: 'Enter staff name',
+                      hintText: 'Staff ID or email (e.g. w01)',
                       hintStyle: const TextStyle(color: Color(0xFF8C8C8C)),
                       filled: true,
                       fillColor: const Color(0xFF242424),
@@ -319,6 +275,12 @@ class _LoginScreenState extends State<LoginScreen> {
                     style: const TextStyle(color: Colors.white),
                   ),
                   const SizedBox(height: 24),
+                  const Text(
+                    'Use your assigned waiter or kitchen staff PIN.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Color(0xFF9E9E9E), fontSize: 12),
+                  ),
+                  const SizedBox(height: 10),
                   ElevatedButton(
                     onPressed: _isLoading ? null : _login,
                     style: ElevatedButton.styleFrom(
@@ -343,11 +305,6 @@ class _LoginScreenState extends State<LoginScreen> {
                               fontWeight: FontWeight.w700,
                             ),
                           ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextButton(
-                    onPressed: _isLoading ? null : _showBootstrapOwnerDialog,
-                    child: const Text('First time setup? Create owner account'),
                   ),
                   const SizedBox(height: 24),
                 ],

@@ -33,10 +33,6 @@ class StaffMember {
         return UserRole.waiter;
       case 'kitchen':
         return UserRole.kitchen;
-      case 'owner':
-        return UserRole.owner;
-      case 'manager':
-        return UserRole.manager;
       default:
         debugPrint('Unknown role from backend: $rawRole');
         return UserRole.waiter;

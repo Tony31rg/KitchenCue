@@ -2,18 +2,30 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'core/routing/app_router.dart';
+import 'services/firebase/staff_auth_service.dart';
 import 'services/state_management/global_state.dart';
 import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Initialize Firebase
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  
+
   final appState = AppState();
+  final authService = StaffAuthService();
+  final restored = await authService.restoreSession();
+  if (restored != null) {
+    appState.setUserRole(restored.staff.role);
+    appState.setWaiterName(restored.staff.displayName);
+    appState.setSession(
+      staffId: restored.staff.id,
+      token: restored.sessionToken,
+    );
+  }
+
   final GoRouter router = AppRouter.create(appState);
 
   runApp(
