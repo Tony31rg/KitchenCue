@@ -16,6 +16,17 @@ class KitchenQueueScreen extends StatefulWidget {
 class _KitchenQueueScreenState extends State<KitchenQueueScreen> {
   OrderStatus? _filter;
 
+  void _snack(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: Colors.red[700],
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = AppStateScope.of(context);
@@ -64,8 +75,13 @@ class _KitchenQueueScreenState extends State<KitchenQueueScreen> {
                     separatorBuilder: (_, __) => const SizedBox(height: 12),
                     itemBuilder: (context, index) => KitchenOrderCard(
                       order: filtered[index],
-                      onStatusChange: (status) =>
-                          state.updateOrderStatus(filtered[index].id, status),
+                      onStatusChange: (status) {
+                        if (!state.canManageKitchenQueue) {
+                          _snack('Only kitchen staff can update order status');
+                          return;
+                        }
+                        state.updateOrderStatus(filtered[index].id, status);
+                      },
                     ),
                   ),
           ),

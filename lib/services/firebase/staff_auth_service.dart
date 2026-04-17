@@ -178,4 +178,8 @@ class StaffAuthService {
       SetOptions(merge: true),
     );
   }
+
+  Future<void> logout() async {
+    await _auth.signOut();
+  }
 }

@@ -13,6 +13,21 @@ service cloud.firestore {
       return role in ['waiter', 'kitchen'];
     }
 
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function isActiveStaff() {
+      return isSignedIn()
+      && userDoc().exists()
+      && (userDoc().data.active == true)
+      && isAllowedRole(userDoc().data.role);
+    }
+
+    function isKitchenStaff() {
+      return isActiveStaff() && userDoc().data.role == 'kitchen';
+    }
+
     function isValidUserCreate() {
       return request.resource.data.keys().hasOnly([
         'name',
@@ -43,6 +58,15 @@ service cloud.firestore {
       && request.resource.data.role == resource.data.role;
     }
 
+    function isStockOnlyUpdate() {
+      return request.resource.data.diff(resource.data).changedKeys().hasOnly([
+        'stock_left',
+        'stock',
+        'updatedAt',
+      ])
+      && request.resource.data.stock_left is int;
+    }
+
     // Staff profile: each user can only read own role/profile document.
     match /users/{uid} {
       allow read: if isSelf(uid);
@@ -66,6 +90,28 @@ service cloud.firestore {
 
     match /staffSessions/{document=**} {
       allow read, write: if false;
+    }
+
+    // Dishes are readable by active staff.
+    // Kitchen staff can create/update/delete dishes and stocks.
+    match /dishes/{itemId} {
+      allow read: if isActiveStaff();
+      allow create, delete: if isKitchenStaff();
+      allow update: if isKitchenStaff() || (isActiveStaff() && isStockOnlyUpdate());
+    }
+
+    // Orders are created by active staff and updated through kitchen/waiter flows.
+    match /orders/{orderId} {
+      allow read: if isActiveStaff();
+      allow create, update: if isActiveStaff();
+      allow delete: if isKitchenStaff();
+    }
+
+    // Single source of truth for restaurant busy mode.
+    match /settings/{docId} {
+      allow read: if isActiveStaff();
+      allow create, update: if isKitchenStaff() && docId == 'restaurant_status';
+      allow delete: if false;
     }
 
     // Default deny: explicitly open collections when needed.

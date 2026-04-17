@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../core/constants/route_constants.dart';
 import '../core/utils/input_decoration.dart';
+import '../services/firebase/staff_auth_service.dart';
 import '../services/state_management/global_state.dart';
 import 'header_button.dart';
 
@@ -21,6 +22,8 @@ class MenuAppBar extends StatelessWidget {
   final ValueChanged<String> onSearchChanged;
   final int cartCount;
   final VoidCallback onCartTap;
+
+  static final StaffAuthService _staffAuthService = StaffAuthService();
 
   @override
   Widget build(BuildContext context) {
@@ -71,8 +74,9 @@ class MenuAppBar extends StatelessWidget {
                     label: 'Logout',
                     icon: Icons.logout,
                     color: const Color(0xFF3A3A3A),
-                    onTap: () {
-                      state.setUserRole(null);
+                    onTap: () async {
+                      await _staffAuthService.logout();
+                      state.clearSession();
                       context.go(RouteConstants.login);
                     },
                   ),

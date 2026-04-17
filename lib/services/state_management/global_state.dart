@@ -1,4 +1,5 @@
 import 'dart:collection';
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 
@@ -7,6 +8,7 @@ import '../../models/menu_item.dart';
 import '../../models/order.dart';
 import '../../models/restaurant_table.dart';
 import '../../models/user_role.dart';
+import '../firebase/firestore_sync_service.dart';
 
 class AppState extends ChangeNotifier {
   AppState();
@@ -15,6 +17,10 @@ class AppState extends ChangeNotifier {
   String waiterName = '';
   String currentStaffId = '';
   String sessionToken = '';
+
+  bool get canManageStock => userRole?.canManageStock ?? false;
+  bool get canManageKitchenQueue => userRole == UserRole.kitchen;
+  bool get canPlaceOrders => userRole == UserRole.waiter;
 
   // Kitchen capacity system (PRD Section 6.4)
   KitchenCapacity kitchenCapacity = KitchenCapacity.low;
@@ -29,6 +35,13 @@ class AppState extends ChangeNotifier {
   final List<MenuItem> _menuItems = _seedMenuItems();
   final List<Order> _orders = <Order>[];
   final List<RestaurantTable> _tables = _seedTables();
+
+  FirestoreSyncService? _syncService;
+  StreamSubscription<List<MenuItem>>? _menuSubscription;
+  StreamSubscription<List<Order>>? _orderSubscription;
+  StreamSubscription<bool>? _busySubscription;
+  bool _syncingFromRemote = false;
+  bool _syncInitialized = false;
 
   UnmodifiableListView<MenuItem> get menuItems =>
       UnmodifiableListView(_menuItems);
@@ -97,11 +110,67 @@ class AppState extends ChangeNotifier {
   }
 
   void clearSession() {
+    stopRemoteSync();
     userRole = null;
     waiterName = '';
     currentStaffId = '';
     sessionToken = '';
     notifyListeners();
+  }
+
+  Future<void> initializeRemoteSync({
+    FirestoreSyncService? service,
+  }) async {
+    if (_syncInitialized) {
+      return;
+    }
+
+    _syncService = service ?? FirestoreSyncService();
+    await _syncService!.ensureMenuSeeded(_menuItems);
+    await _syncService!.ensureKitchenConfig();
+
+    _menuSubscription = _syncService!.watchMenuItems().listen((items) {
+      _syncingFromRemote = true;
+      _menuItems
+        ..clear()
+        ..addAll(items);
+      _syncingFromRemote = false;
+      notifyListeners();
+    });
+
+    _orderSubscription = _syncService!.watchOrders().listen((orders) {
+      _syncingFromRemote = true;
+      _orders
+        ..clear()
+        ..addAll(orders);
+      _recalculateCapacity();
+      _syncingFromRemote = false;
+      notifyListeners();
+    });
+
+    _busySubscription = _syncService!.watchKitchenBusyMode().listen((isBusy) {
+      _syncingFromRemote = true;
+      kitchenStatus = isBusy ? KitchenStatus.busy : KitchenStatus.ready;
+      _syncingFromRemote = false;
+      notifyListeners();
+    });
+
+    _syncInitialized = true;
+  }
+
+  void stopRemoteSync() {
+    if (!_syncInitialized) {
+      return;
+    }
+
+    unawaited(_menuSubscription?.cancel());
+    unawaited(_orderSubscription?.cancel());
+    unawaited(_busySubscription?.cancel());
+    _menuSubscription = null;
+    _orderSubscription = null;
+    _busySubscription = null;
+    _syncService = null;
+    _syncInitialized = false;
   }
 
   MenuItem? _findMenuItem(String id) {
@@ -119,6 +188,14 @@ class AppState extends ChangeNotifier {
     final clamped = newStock < 0 ? 0 : newStock;
     _menuItems[index] = _menuItems[index].copyWith(stock: clamped);
     notifyListeners();
+
+    if (!_syncingFromRemote) {
+      unawaited(_syncService?.updateMenuStock(
+        itemId: itemId,
+        stock: clamped,
+        is86d: _menuItems[index].is86d,
+      ));
+    }
   }
 
   bool decrementStock(String itemId, int quantity) {
@@ -165,6 +242,27 @@ class AppState extends ChangeNotifier {
     _orders.add(order);
     _recalculateCapacity();
     notifyListeners();
+
+    if (!_syncingFromRemote) {
+      unawaited(
+        _syncService?.submitOrder(
+          tableNumber: order.tableNumber,
+          items: order.items
+              .map(
+                (item) => {
+                  'menuItemId': item.menuItem.id,
+                  'name': item.menuItem.name,
+                  'price': item.menuItem.price,
+                  'quantity': item.quantity,
+                  'modifiers': item.modifiers,
+                  'course': item.course,
+                  'notes': item.notes,
+                },
+              )
+              .toList(growable: false),
+        ),
+      );
+    }
   }
 
   /// Update order status with appropriate timestamps (PRD US-005, US-007)
@@ -193,11 +291,19 @@ class AppState extends ChangeNotifier {
     _orders[index] = updated;
     _recalculateCapacity();
     notifyListeners();
+
+    if (!_syncingFromRemote) {
+      unawaited(_syncService?.upsertOrder(updated));
+    }
   }
 
   void setKitchenStatus(KitchenStatus status) {
     kitchenStatus = status;
     notifyListeners();
+
+    if (!_syncingFromRemote) {
+      unawaited(_syncService?.setKitchenBusyMode(status == KitchenStatus.busy));
+    }
   }
 
   void toggleKitchenBusy() {
@@ -205,6 +311,11 @@ class AppState extends ChangeNotifier {
         ? KitchenStatus.ready
         : KitchenStatus.busy;
     notifyListeners();
+
+    if (!_syncingFromRemote) {
+      unawaited(_syncService
+          ?.setKitchenBusyMode(kitchenStatus == KitchenStatus.busy));
+    }
   }
 
   /// Set kitchen capacity level directly
@@ -231,7 +342,10 @@ class AppState extends ChangeNotifier {
     if (index == -1) return;
     _menuItems[index] = _menuItems[index].copyWith(is86d: is86d);
     notifyListeners();
-    // TODO: Send push notification to all devices
+
+    if (!_syncingFromRemote) {
+      unawaited(_syncService?.updateMenu86(itemId: itemId, is86d: is86d));
+    }
   }
 
   /// Get list of 86'd items
@@ -265,6 +379,25 @@ class AppState extends ChangeNotifier {
     );
     _recalculateCapacity();
     notifyListeners();
+
+    if (!_syncingFromRemote) {
+      unawaited(_syncService?.upsertOrder(_orders[index]));
+    }
+  }
+
+  void deleteOrder(String orderId) {
+    final index = _orders.indexWhere((order) => order.id == orderId);
+    if (index == -1) {
+      return;
+    }
+
+    _orders.removeAt(index);
+    _recalculateCapacity();
+    notifyListeners();
+
+    if (!_syncingFromRemote) {
+      unawaited(_syncService?.deleteOrder(orderId));
+    }
   }
 
   void resetAllStock(int value) {
@@ -285,6 +418,10 @@ class AppState extends ChangeNotifier {
   void addMenuItem(MenuItem item) {
     _menuItems.add(item);
     notifyListeners();
+
+    if (!_syncingFromRemote) {
+      unawaited(_syncService?.upsertMenuItem(item));
+    }
   }
 
   String generateNewId() {
@@ -417,6 +554,12 @@ class AppState extends ChangeNotifier {
             'https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?w=300',
       ),
     ];
+  }
+
+  @override
+  void dispose() {
+    stopRemoteSync();
+    super.dispose();
   }
 }
 

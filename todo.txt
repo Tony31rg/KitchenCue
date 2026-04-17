@@ -1,6 +1,5 @@
-2. login online (username, roles and password (encrypt) save in firestore
-3. account authorization logic and roles
-4. we need to upload and save and reuse disheds on firestore
-5. CRUD orders with status in firestore
-6. CRUD stocks for meal in firestore
-7. flag for busymode and store in firestore
+
+4. done - upload/save/reuse dishes on firestore
+5. done - CRUD orders with status in firestore
+6. done - CRUD stocks for meal in firestore
+7. done - busy mode flag stored in firestore

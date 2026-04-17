@@ -19,6 +19,44 @@ class AppRouter {
   static final GlobalKey<NavigatorState> _rootNavigatorKey =
       GlobalKey<NavigatorState>();
 
+  static String? redirectForRole(UserRole? role, String location) {
+    final isAuthScreen =
+        location == RouteConstants.landing || location == RouteConstants.login;
+
+    if (role == null) {
+      final protectedRoutes = <String>{
+        RouteConstants.dashboard,
+        RouteConstants.orderDetail,
+        RouteConstants.kitchenQueue,
+        RouteConstants.kitchenStatus,
+      };
+      if (protectedRoutes.contains(location)) {
+        return RouteConstants.login;
+      }
+      return null;
+    }
+
+    if (isAuthScreen) {
+      return role == UserRole.kitchen
+          ? RouteConstants.kitchenQueue
+          : RouteConstants.dashboard;
+    }
+
+    if (role == UserRole.waiter &&
+        (location == RouteConstants.kitchenQueue ||
+            location == RouteConstants.kitchenStatus)) {
+      return RouteConstants.dashboard;
+    }
+
+    if (role == UserRole.kitchen &&
+        (location == RouteConstants.dashboard ||
+            location == RouteConstants.orderDetail)) {
+      return RouteConstants.kitchenQueue;
+    }
+
+    return null;
+  }
+
   static GoRouter create(AppState appState) {
     return GoRouter(
       navigatorKey: _rootNavigatorKey,
@@ -26,43 +64,8 @@ class AppRouter {
       debugLogDiagnostics: true,
       refreshListenable: appState,
       redirect: (context, state) {
-        final role = appState.userRole;
         final location = state.matchedLocation;
-        final isAuthScreen = location == RouteConstants.landing ||
-            location == RouteConstants.login;
-
-        if (role == null) {
-          final protectedRoutes = <String>{
-            RouteConstants.dashboard,
-            RouteConstants.orderDetail,
-            RouteConstants.kitchenQueue,
-            RouteConstants.kitchenStatus,
-          };
-          if (protectedRoutes.contains(location)) {
-            return RouteConstants.login;
-          }
-          return null;
-        }
-
-        if (isAuthScreen) {
-          return role == UserRole.kitchen
-              ? RouteConstants.kitchenQueue
-              : RouteConstants.dashboard;
-        }
-
-        if (role == UserRole.waiter &&
-            (location == RouteConstants.kitchenQueue ||
-                location == RouteConstants.kitchenStatus)) {
-          return RouteConstants.dashboard;
-        }
-
-        if (role == UserRole.kitchen &&
-            (location == RouteConstants.dashboard ||
-                location == RouteConstants.orderDetail)) {
-          return RouteConstants.kitchenQueue;
-        }
-
-        return null;
+        return redirectForRole(appState.userRole, location);
       },
       routes: [
         GoRoute(

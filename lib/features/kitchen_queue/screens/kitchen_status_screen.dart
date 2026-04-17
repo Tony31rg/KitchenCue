@@ -34,6 +34,7 @@ class _KitchenStatusScreenState extends State<KitchenStatusScreen> {
   Widget build(BuildContext context) {
     final state = AppStateScope.of(context);
     final isBusy = state.kitchenStatus == KitchenStatus.busy;
+    final canManageKitchen = state.canManageStock;
 
     return Scaffold(
       backgroundColor: const Color(0xFF1A1A1A),
@@ -45,6 +46,11 @@ class _KitchenStatusScreenState extends State<KitchenStatusScreen> {
               child: KitchenStatusCard(
                 isBusy: isBusy,
                 onToggle: () {
+                  if (!canManageKitchen) {
+                    _snack('Only kitchen staff can change busy mode',
+                        isError: true);
+                    return;
+                  }
                   state.toggleKitchenBusy();
                   _snack(
                     isBusy
@@ -74,6 +80,11 @@ class _KitchenStatusScreenState extends State<KitchenStatusScreen> {
                 }),
                 onDraftChanged: (id, v) => setState(() => _draft[id] = v),
                 onSave: (id) {
+                  if (!canManageKitchen) {
+                    _snack('Only kitchen staff can update stock',
+                        isError: true);
+                    return;
+                  }
                   final val = _draft[id];
                   if (val != null) {
                     state.updateStock(id, val);
@@ -87,14 +98,28 @@ class _KitchenStatusScreenState extends State<KitchenStatusScreen> {
             SliverToBoxAdapter(
               child: QuickActionsSection(
                 onAddStockToAll: () {
+                  if (!canManageKitchen) {
+                    _snack('Only kitchen staff can bulk update stock',
+                        isError: true);
+                    return;
+                  }
                   state.addStockToAll(5);
                   _snack('Added 5 to all items');
                 },
                 onResetAllStock: () {
+                  if (!canManageKitchen) {
+                    _snack('Only kitchen staff can reset stock', isError: true);
+                    return;
+                  }
                   state.resetAllStock(10);
                   _snack('Reset all stock to 10');
                 },
                 onAddMenuItem: () async {
+                  if (!canManageKitchen) {
+                    _snack('Only kitchen staff can add menu items',
+                        isError: true);
+                    return;
+                  }
                   final name = await showAddMenuItemDialog(context, state);
                   if (name != null) {
                     _snack('"$name" added to menu');

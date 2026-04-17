@@ -24,6 +24,7 @@ void main() async {
       staffId: restored.staff.id,
       token: restored.sessionToken,
     );
+    await appState.initializeRemoteSync();
   }
 
   final GoRouter router = AppRouter.create(appState);

@@ -56,6 +56,7 @@ class _LoginScreenState extends State<LoginScreen> {
         staffId: result.staff.id,
         token: result.sessionToken,
       );
+      await appState.initializeRemoteSync();
 
       if (!mounted) return;
       if (result.staff.mustResetPin) {
@@ -259,7 +260,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     keyboardType: TextInputType.number,
                     onSubmitted: (_) => _login(),
                     decoration: InputDecoration(
-                      hintText: 'Enter PIN',
+                      hintText: 'Enter Password',
                       hintStyle: const TextStyle(color: Color(0xFF8C8C8C)),
                       filled: true,
                       fillColor: const Color(0xFF242424),

@@ -3,10 +3,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/route_constants.dart';
 import '../../../models/menu_item.dart';
+import '../../../models/kitchen_status.dart';
 import '../../../models/order.dart';
 import '../../../models/restaurant_table.dart';
 import '../../../services/state_management/global_state.dart';
-import '../../../widgets/busy_banner.dart';
 import '../../../widgets/cart_overlay.dart';
 import '../../../widgets/category_section.dart';
 import '../../../widgets/menu_app_bar.dart';
@@ -68,6 +68,10 @@ class _MenuDashboardScreenState extends State<MenuDashboardScreen> {
   }
 
   void _placeOrder(AppState state) {
+    if (!state.canPlaceOrders) {
+      _snack('Only waiter accounts can place orders', isError: true);
+      return;
+    }
     if (_selectedTable == null) {
       _snack('Please select a table', isError: true);
       return;
@@ -146,11 +150,22 @@ class _MenuDashboardScreenState extends State<MenuDashboardScreen> {
                 cartCount: _cartCount(),
                 onCartTap: () => setState(() => _showCart = true),
               ),
-              if (state.isKitchenBusy)
+              if (state.kitchenStatus == KitchenStatus.busy)
                 SliverToBoxAdapter(
-                  child: BusyBanner(
-                    capacity: state.kitchenCapacity,
-                    estimatedWaitTime: state.estimatedWaitTime,
+                  child: Container(
+                    width: double.infinity,
+                    color: const Color(0xFFFFD54F),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
+                    child: const Text(
+                      'Kitchen is currently busy. Expect longer wait times.',
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                 ),
               SliverPadding(
