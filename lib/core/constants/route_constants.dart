@@ -10,6 +10,7 @@ class RouteConstants {
   static const String orderDetail = '/order-detail';
   static const String kitchenQueue = '/kitchen-queue';
   static const String kitchenStatus = '/kitchen-status';
+  static const String ownerStaff = '/owner-staff';
 
   // Route names (for named navigation)
   static const String landingName = 'landing';
@@ -18,4 +19,5 @@ class RouteConstants {
   static const String orderDetailName = 'orderDetail';
   static const String kitchenQueueName = 'kitchenQueue';
   static const String kitchenStatusName = 'kitchenStatus';
+  static const String ownerStaffName = 'ownerStaff';
 }

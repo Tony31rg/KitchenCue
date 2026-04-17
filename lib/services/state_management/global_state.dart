@@ -13,6 +13,8 @@ class AppState extends ChangeNotifier {
 
   UserRole? userRole;
   String waiterName = '';
+  String currentStaffId = '';
+  String sessionToken = '';
 
   // Kitchen capacity system (PRD Section 6.4)
   KitchenCapacity kitchenCapacity = KitchenCapacity.low;
@@ -82,6 +84,23 @@ class AppState extends ChangeNotifier {
 
   void setWaiterName(String name) {
     waiterName = name.trim();
+    notifyListeners();
+  }
+
+  void setSession({
+    required String staffId,
+    required String token,
+  }) {
+    currentStaffId = staffId;
+    sessionToken = token;
+    notifyListeners();
+  }
+
+  void clearSession() {
+    userRole = null;
+    waiterName = '';
+    currentStaffId = '';
+    sessionToken = '';
     notifyListeners();
   }
 

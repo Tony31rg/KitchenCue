@@ -1,4 +1,3 @@
-1. no landing page
 2. login online (username, roles and password (encrypt) save in firestore
 3. account authorization logic and roles
 4. we need to upload and save and reuse disheds on firestore

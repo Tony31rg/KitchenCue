@@ -3,11 +3,13 @@ import 'package:go_router/go_router.dart';
 import '../constants/route_constants.dart';
 import '../../features/auth/screens/landing_screen.dart';
 import '../../features/auth/screens/login_screen.dart';
+import '../../features/auth/screens/owner_staff_screen.dart';
 import '../../features/menu_dashboard/screens/menu_dashboard_screen.dart';
 import '../../features/order_management/screens/order_detail_screen.dart';
 import '../../features/kitchen_queue/screens/kitchen_queue_screen.dart';
 import '../../features/kitchen_queue/screens/kitchen_status_screen.dart';
 import '../../models/order.dart';
+import '../../models/user_role.dart';
 import '../../services/state_management/global_state.dart';
 
 /// App Router configuration using GoRouter
@@ -75,6 +77,31 @@ class AppRouter {
           path: RouteConstants.kitchenStatus,
           name: RouteConstants.kitchenStatusName,
           builder: (context, state) => const KitchenStatusScreen(),
+        ),
+        GoRoute(
+          path: RouteConstants.ownerStaff,
+          name: RouteConstants.ownerStaffName,
+          builder: (context, state) {
+            if (appState.userRole == UserRole.owner) {
+              return const OwnerStaffScreen();
+            }
+            return Scaffold(
+              body: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('Owner access required'),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: () =>
+                          GoRouter.of(context).go(RouteConstants.login),
+                      child: const Text('Back to Login'),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
         ),
       ],
       errorBuilder: (context, state) => Scaffold(

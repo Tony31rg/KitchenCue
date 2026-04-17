@@ -1,0 +1,26 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Staff auth and secret documents are only accessed through Cloud Functions.
+    match /staff/{document=**} {
+      allow read, write: if false;
+    }
+
+    match /staffSecrets/{document=**} {
+      allow read, write: if false;
+    }
+
+    match /staffNameIndex/{document=**} {
+      allow read, write: if false;
+    }
+
+    match /staffSessions/{document=**} {
+      allow read, write: if false;
+    }
+
+    // Default deny: explicitly open collections when needed.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
