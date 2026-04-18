@@ -17,9 +17,13 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(request.auth.uid));
     }
 
-    function isActiveStaff() {
+    function userDocExists() {
       return isSignedIn()
-      && userDoc().exists()
+      && exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function isActiveStaff() {
+      return userDocExists()
       && (userDoc().data.active == true)
       && isAllowedRole(userDoc().data.role);
     }

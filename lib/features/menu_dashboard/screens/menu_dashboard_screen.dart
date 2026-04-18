@@ -111,7 +111,10 @@ class _MenuDashboardScreenState extends State<MenuDashboardScreen> {
       _selectedTable = null;
     });
     _snack('Order sent to kitchen!');
-    context.go(RouteConstants.orderDetail, extra: order);
+    context.go(
+      '${RouteConstants.orderDetail}?orderId=${order.id}',
+      extra: order,
+    );
   }
 
   void _snack(String msg, {bool isError = false}) {

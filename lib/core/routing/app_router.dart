@@ -87,7 +87,17 @@ class AppRouter {
           path: RouteConstants.orderDetail,
           name: RouteConstants.orderDetailName,
           builder: (context, state) {
-            final order = state.extra as Order?;
+            Order? order = state.extra as Order?;
+            if (order == null) {
+              final orderId = state.uri.queryParameters['orderId'];
+              if (orderId != null && orderId.isNotEmpty) {
+                try {
+                  order = appState.orders.firstWhere((o) => o.id == orderId);
+                } catch (_) {
+                  order = null;
+                }
+              }
+            }
             if (order == null) {
               return Scaffold(
                 body: Center(
