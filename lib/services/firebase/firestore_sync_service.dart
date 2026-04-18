@@ -144,6 +144,38 @@ class FirestoreSyncService {
     await _ordersCollection.doc(order.id).set(_orderToMap(order));
   }
 
+  Future<int> backfillMissingWaiterNames({String fallback = 'Unknown'}) async {
+    final normalizedFallback = _normalizeWaiterName(fallback);
+    final snapshot = await _ordersCollection.get();
+    if (snapshot.docs.isEmpty) {
+      return 0;
+    }
+
+    final batch = _firestore.batch();
+    var updatedCount = 0;
+
+    for (final doc in snapshot.docs) {
+      final rawName = doc.data()['waiterName']?.toString();
+      if (rawName == null || rawName.trim().isEmpty) {
+        batch.set(
+          doc.reference,
+          {
+            'waiterName': normalizedFallback,
+            'updatedAt': FieldValue.serverTimestamp(),
+          },
+          SetOptions(merge: true),
+        );
+        updatedCount++;
+      }
+    }
+
+    if (updatedCount > 0) {
+      await batch.commit();
+    }
+
+    return updatedCount;
+  }
+
   Future<DocumentReference<Map<String, dynamic>>> submitOrder({
     required List<Map<String, dynamic>> items,
     required int tableNumber,
@@ -205,11 +237,12 @@ class FirestoreSyncService {
   }
 
   Map<String, dynamic> _orderToMap(Order order) {
+    final waiterName = _normalizeWaiterName(order.waiterName);
     return {
       'tableNumber': order.tableNumber,
       'createdAt': Timestamp.fromDate(order.createdAt),
       'status': order.status.name,
-      'waiterName': order.waiterName,
+      'waiterName': waiterName,
       'acknowledgedAt': _timestampOrNull(order.acknowledgedAt),
       'readyAt': _timestampOrNull(order.readyAt),
       'servedAt': _timestampOrNull(order.servedAt),
@@ -254,13 +287,15 @@ class FirestoreSyncService {
         )
         .toList(growable: false);
 
+    final waiterName = _normalizeWaiterName(data['waiterName']?.toString());
+
     return Order(
       id: id,
       tableNumber: (data['tableNumber'] as num?)?.toInt() ?? 0,
       items: items,
       createdAt: _dateOrNow(data['createdAt']),
       status: _parseStatus((data['status'] ?? 'pending').toString()),
-      waiterName: (data['waiterName'] ?? '').toString(),
+      waiterName: waiterName,
       acknowledgedAt: _dateOrNull(data['acknowledgedAt']),
       readyAt: _dateOrNull(data['readyAt']),
       servedAt: _dateOrNull(data['servedAt']),
@@ -268,6 +303,11 @@ class FirestoreSyncService {
       cancellationReason: data['cancellationReason']?.toString(),
       notes: data['notes']?.toString(),
     );
+  }
+
+  String _normalizeWaiterName(String? value) {
+    final name = (value ?? '').trim();
+    return name.isEmpty ? 'Unknown' : name;
   }
 
   OrderStatus _parseStatus(String raw) {

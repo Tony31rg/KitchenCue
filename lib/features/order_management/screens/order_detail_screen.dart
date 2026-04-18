@@ -12,6 +12,8 @@ class OrderDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final timeStr = _formatTime(order.createdAt);
+    final waiterLabel =
+        order.waiterName.trim().isEmpty ? 'Unknown' : order.waiterName.trim();
 
     return Scaffold(
       backgroundColor: const Color(0xFF1A1A1A),
@@ -198,7 +200,7 @@ class OrderDetailScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 20),
                           Text(
-                            'Served by: ${order.waiterName}',
+                            'Served by: $waiterLabel',
                             textAlign: TextAlign.center,
                             style: const TextStyle(
                                 color: Colors.grey, fontSize: 13),

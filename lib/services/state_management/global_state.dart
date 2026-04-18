@@ -43,6 +43,7 @@ class AppState extends ChangeNotifier {
   StreamSubscription<bool>? _busySubscription;
   bool _syncingFromRemote = false;
   bool _syncInitialized = false;
+  bool _waiterNameBackfillDone = false;
   String? _lastSyncError;
 
   UnmodifiableListView<MenuItem> get menuItems =>
@@ -132,6 +133,17 @@ class AppState extends ChangeNotifier {
     _syncService = service ?? FirestoreSyncService();
     await _syncService!.ensureMenuSeeded(_menuItems);
     await _syncService!.ensureKitchenConfig();
+
+    if (!_waiterNameBackfillDone) {
+      try {
+        await _syncService!.backfillMissingWaiterNames(
+          fallback: waiterName.isEmpty ? 'Unknown' : waiterName,
+        );
+        _waiterNameBackfillDone = true;
+      } catch (error, stackTrace) {
+        _setSyncError(error, stackTrace, 'backfill waiter names');
+      }
+    }
 
     _menuSubscription = _syncService!.watchMenuItems().listen(
       (items) {
@@ -272,23 +284,9 @@ class AppState extends ChangeNotifier {
     notifyListeners();
 
     if (!_syncingFromRemote) {
-      unawaited(
-        _syncService?.submitOrder(
-          tableNumber: order.tableNumber,
-          items: order.items
-              .map(
-                (item) => {
-                  'menuItemId': item.menuItem.id,
-                  'name': item.menuItem.name,
-                  'price': item.menuItem.price,
-                  'quantity': item.quantity,
-                  'modifiers': item.modifiers,
-                  'course': item.course,
-                  'notes': item.notes,
-                },
-              )
-              .toList(growable: false),
-        ),
+      _trackSync(
+        _syncService?.upsertOrder(order),
+        action: 'submit order',
       );
     }
   }

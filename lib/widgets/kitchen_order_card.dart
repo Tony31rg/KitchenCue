@@ -33,6 +33,11 @@ class KitchenOrderCard extends StatelessWidget {
     return order.status.displayName.toUpperCase();
   }
 
+  String get _waiterLabel {
+    final name = order.waiterName.trim();
+    return name.isEmpty ? 'Unknown' : name;
+  }
+
   String _timeSince(DateTime dt) {
     final secs = DateTime.now().difference(dt).inSeconds;
     if (secs < 60) return '${secs}s ago';
@@ -111,7 +116,7 @@ class KitchenOrderCard extends StatelessWidget {
                   const Icon(Icons.access_time, color: Colors.grey, size: 14),
                   const SizedBox(width: 4),
                   Text(
-                    '${_formatTime(order.createdAt)}  •  ${_timeSince(order.createdAt)}  •  Waiter: ${order.waiterName}',
+                    '${_formatTime(order.createdAt)}  •  ${_timeSince(order.createdAt)}  •  Waiter: $_waiterLabel',
                     style: const TextStyle(color: Colors.grey, fontSize: 12),
                   ),
                 ],
