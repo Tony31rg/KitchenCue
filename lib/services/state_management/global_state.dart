@@ -498,6 +498,25 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  Future<void> addMenuItemAndSync(MenuItem item) async {
+    _menuItems.add(item);
+    notifyListeners();
+
+    if (_syncingFromRemote || _syncService == null) {
+      return;
+    }
+
+    try {
+      await _syncService!.upsertMenuItem(item);
+      _clearSyncError();
+      notifyListeners();
+    } catch (error, stackTrace) {
+      _menuItems.removeWhere((entry) => entry.id == item.id);
+      _setSyncError(error, stackTrace, 'add menu item');
+      rethrow;
+    }
+  }
+
   void clearLastSyncError() {
     if (_lastSyncError == null) {
       return;

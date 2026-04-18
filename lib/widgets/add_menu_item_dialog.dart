@@ -13,7 +13,7 @@ class AddMenuItemDialog extends StatefulWidget {
   });
 
   final List<String> categories;
-  final void Function(MenuItem item) onAdd;
+  final Future<void> Function(MenuItem item) onAdd;
   final String Function() generateId;
 
   @override
@@ -28,6 +28,7 @@ class _AddMenuItemDialogState extends State<AddMenuItemDialog> {
   final _newCategoryCtrl = TextEditingController();
   late String _selectedCategory;
   bool _isNewCategory = false;
+  bool _isSubmitting = false;
 
   @override
   void initState() {
@@ -46,7 +47,11 @@ class _AddMenuItemDialogState extends State<AddMenuItemDialog> {
     super.dispose();
   }
 
-  void _submit() {
+  Future<void> _submit() async {
+    if (_isSubmitting) {
+      return;
+    }
+
     final name = _nameCtrl.text.trim();
     final price = double.tryParse(_priceCtrl.text.trim());
     final stock = int.tryParse(_stockCtrl.text.trim()) ?? 10;
@@ -76,8 +81,24 @@ class _AddMenuItemDialogState extends State<AddMenuItemDialog> {
       imageUrl: imageUrl.isEmpty ? null : imageUrl,
     );
 
-    widget.onAdd(newItem);
-    Navigator.pop(context, name);
+    setState(() => _isSubmitting = true);
+
+    try {
+      await widget.onAdd(newItem);
+      if (!mounted) {
+        return;
+      }
+      Navigator.pop(context, name);
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      _showError('Failed to save to Firestore. Check sync error banner.');
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
+    }
   }
 
   void _showError(String msg) {
@@ -129,13 +150,22 @@ class _AddMenuItemDialogState extends State<AddMenuItemDialog> {
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.pop(context),
+          onPressed: _isSubmitting ? null : () => Navigator.pop(context),
           child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
         ),
         ElevatedButton(
-          onPressed: _submit,
+          onPressed: _isSubmitting ? null : _submit,
           style: ElevatedButton.styleFrom(backgroundColor: Colors.green[700]),
-          child: const Text('Add Item'),
+          child: _isSubmitting
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : const Text('Add Item'),
         ),
       ],
     );
@@ -195,7 +225,7 @@ Future<String?> showAddMenuItemDialog(
     builder: (ctx) => AddMenuItemDialog(
       categories: state.categories.toList(),
       generateId: state.generateNewId,
-      onAdd: state.addMenuItem,
+      onAdd: state.addMenuItemAndSync,
     ),
   );
 }
