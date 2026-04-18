@@ -150,6 +150,43 @@ class _MenuDashboardScreenState extends State<MenuDashboardScreen> {
                 cartCount: _cartCount(),
                 onCartTap: () => setState(() => _showCart = true),
               ),
+              if (state.lastSyncError != null)
+                SliverToBoxAdapter(
+                  child: Container(
+                    margin:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFB71C1C),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFFE57373)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.error_outline,
+                            color: Colors.white, size: 18),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            state.lastSyncError!,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: state.clearLastSyncError,
+                          icon: const Icon(Icons.close,
+                              color: Colors.white, size: 18),
+                          tooltip: 'Dismiss',
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               if (state.kitchenStatus == KitchenStatus.busy)
                 SliverToBoxAdapter(
                   child: Container(

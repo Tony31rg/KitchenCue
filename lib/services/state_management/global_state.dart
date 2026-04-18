@@ -1,6 +1,7 @@
 import 'dart:collection';
 import 'dart:async';
 
+import 'package:cloud_firestore/cloud_firestore.dart' hide Order;
 import 'package:flutter/material.dart';
 
 import '../../models/kitchen_status.dart';
@@ -42,6 +43,7 @@ class AppState extends ChangeNotifier {
   StreamSubscription<bool>? _busySubscription;
   bool _syncingFromRemote = false;
   bool _syncInitialized = false;
+  String? _lastSyncError;
 
   UnmodifiableListView<MenuItem> get menuItems =>
       UnmodifiableListView(_menuItems);
@@ -50,6 +52,8 @@ class AppState extends ChangeNotifier {
 
   UnmodifiableListView<RestaurantTable> get tables =>
       UnmodifiableListView(_tables);
+
+  String? get lastSyncError => _lastSyncError;
 
   /// Whether kitchen is busy (high or critical capacity)
   bool get isKitchenBusy => kitchenCapacity.isBusy;
@@ -129,31 +133,52 @@ class AppState extends ChangeNotifier {
     await _syncService!.ensureMenuSeeded(_menuItems);
     await _syncService!.ensureKitchenConfig();
 
-    _menuSubscription = _syncService!.watchMenuItems().listen((items) {
-      _syncingFromRemote = true;
-      _menuItems
-        ..clear()
-        ..addAll(items);
-      _syncingFromRemote = false;
-      notifyListeners();
-    });
+    _menuSubscription = _syncService!.watchMenuItems().listen(
+      (items) {
+        _syncingFromRemote = true;
+        _menuItems
+          ..clear()
+          ..addAll(items);
+        _syncingFromRemote = false;
+        _clearSyncError();
+        notifyListeners();
+      },
+      onError: (Object error, StackTrace stackTrace) {
+        _syncingFromRemote = false;
+        _setSyncError(error, stackTrace, 'watch menu items');
+      },
+    );
 
-    _orderSubscription = _syncService!.watchOrders().listen((orders) {
-      _syncingFromRemote = true;
-      _orders
-        ..clear()
-        ..addAll(orders);
-      _recalculateCapacity();
-      _syncingFromRemote = false;
-      notifyListeners();
-    });
+    _orderSubscription = _syncService!.watchOrders().listen(
+      (orders) {
+        _syncingFromRemote = true;
+        _orders
+          ..clear()
+          ..addAll(orders);
+        _recalculateCapacity();
+        _syncingFromRemote = false;
+        _clearSyncError();
+        notifyListeners();
+      },
+      onError: (Object error, StackTrace stackTrace) {
+        _syncingFromRemote = false;
+        _setSyncError(error, stackTrace, 'watch orders');
+      },
+    );
 
-    _busySubscription = _syncService!.watchKitchenBusyMode().listen((isBusy) {
-      _syncingFromRemote = true;
-      kitchenStatus = isBusy ? KitchenStatus.busy : KitchenStatus.ready;
-      _syncingFromRemote = false;
-      notifyListeners();
-    });
+    _busySubscription = _syncService!.watchKitchenBusyMode().listen(
+      (isBusy) {
+        _syncingFromRemote = true;
+        kitchenStatus = isBusy ? KitchenStatus.busy : KitchenStatus.ready;
+        _syncingFromRemote = false;
+        _clearSyncError();
+        notifyListeners();
+      },
+      onError: (Object error, StackTrace stackTrace) {
+        _syncingFromRemote = false;
+        _setSyncError(error, stackTrace, 'watch busy mode');
+      },
+    );
 
     _syncInitialized = true;
   }
@@ -190,11 +215,14 @@ class AppState extends ChangeNotifier {
     notifyListeners();
 
     if (!_syncingFromRemote) {
-      unawaited(_syncService?.updateMenuStock(
-        itemId: itemId,
-        stock: clamped,
-        is86d: _menuItems[index].is86d,
-      ));
+      _trackSync(
+        _syncService?.updateMenuStock(
+          itemId: itemId,
+          stock: clamped,
+          is86d: _menuItems[index].is86d,
+        ),
+        action: 'update stock',
+      );
     }
   }
 
@@ -293,7 +321,10 @@ class AppState extends ChangeNotifier {
     notifyListeners();
 
     if (!_syncingFromRemote) {
-      unawaited(_syncService?.upsertOrder(updated));
+      _trackSync(
+        _syncService?.upsertOrder(updated),
+        action: 'update order status',
+      );
     }
   }
 
@@ -302,7 +333,10 @@ class AppState extends ChangeNotifier {
     notifyListeners();
 
     if (!_syncingFromRemote) {
-      unawaited(_syncService?.setKitchenBusyMode(status == KitchenStatus.busy));
+      _trackSync(
+        _syncService?.setKitchenBusyMode(status == KitchenStatus.busy),
+        action: 'set kitchen busy mode',
+      );
     }
   }
 
@@ -313,8 +347,10 @@ class AppState extends ChangeNotifier {
     notifyListeners();
 
     if (!_syncingFromRemote) {
-      unawaited(_syncService
-          ?.setKitchenBusyMode(kitchenStatus == KitchenStatus.busy));
+      _trackSync(
+        _syncService?.setKitchenBusyMode(kitchenStatus == KitchenStatus.busy),
+        action: 'toggle kitchen busy mode',
+      );
     }
   }
 
@@ -344,7 +380,10 @@ class AppState extends ChangeNotifier {
     notifyListeners();
 
     if (!_syncingFromRemote) {
-      unawaited(_syncService?.updateMenu86(itemId: itemId, is86d: is86d));
+      _trackSync(
+        _syncService?.updateMenu86(itemId: itemId, is86d: is86d),
+        action: 'mark 86 item',
+      );
     }
   }
 
@@ -381,7 +420,10 @@ class AppState extends ChangeNotifier {
     notifyListeners();
 
     if (!_syncingFromRemote) {
-      unawaited(_syncService?.upsertOrder(_orders[index]));
+      _trackSync(
+        _syncService?.upsertOrder(_orders[index]),
+        action: 'cancel order',
+      );
     }
   }
 
@@ -396,7 +438,10 @@ class AppState extends ChangeNotifier {
     notifyListeners();
 
     if (!_syncingFromRemote) {
-      unawaited(_syncService?.deleteOrder(orderId));
+      _trackSync(
+        _syncService?.deleteOrder(orderId),
+        action: 'delete order',
+      );
     }
   }
 
@@ -405,6 +450,19 @@ class AppState extends ChangeNotifier {
       _menuItems[i] = _menuItems[i].copyWith(stock: value);
     }
     notifyListeners();
+
+    if (!_syncingFromRemote) {
+      for (final item in _menuItems) {
+        _trackSync(
+          _syncService?.updateMenuStock(
+            itemId: item.id,
+            stock: item.stock,
+            is86d: item.is86d,
+          ),
+          action: 'reset all stock',
+        );
+      }
+    }
   }
 
   void addStockToAll(int value) {
@@ -413,6 +471,19 @@ class AppState extends ChangeNotifier {
           _menuItems[i].copyWith(stock: _menuItems[i].stock + value);
     }
     notifyListeners();
+
+    if (!_syncingFromRemote) {
+      for (final item in _menuItems) {
+        _trackSync(
+          _syncService?.updateMenuStock(
+            itemId: item.id,
+            stock: item.stock,
+            is86d: item.is86d,
+          ),
+          action: 'add stock to all items',
+        );
+      }
+    }
   }
 
   void addMenuItem(MenuItem item) {
@@ -420,8 +491,55 @@ class AppState extends ChangeNotifier {
     notifyListeners();
 
     if (!_syncingFromRemote) {
-      unawaited(_syncService?.upsertMenuItem(item));
+      _trackSync(
+        _syncService?.upsertMenuItem(item),
+        action: 'add menu item',
+      );
     }
+  }
+
+  void clearLastSyncError() {
+    if (_lastSyncError == null) {
+      return;
+    }
+    _lastSyncError = null;
+    notifyListeners();
+  }
+
+  void _clearSyncError() {
+    _lastSyncError = null;
+  }
+
+  void _trackSync<T>(Future<T>? operation, {required String action}) {
+    if (operation == null) {
+      return;
+    }
+
+    unawaited(operation.then((_) {
+      _clearSyncError();
+    }).catchError((Object error, StackTrace stackTrace) {
+      _setSyncError(error, stackTrace, action);
+    }));
+  }
+
+  void _setSyncError(
+    Object error,
+    StackTrace stackTrace,
+    String action,
+  ) {
+    final message = _formatSyncError(error, action);
+    _lastSyncError = message;
+    debugPrint(message);
+    debugPrintStack(stackTrace: stackTrace);
+    notifyListeners();
+  }
+
+  String _formatSyncError(Object error, String action) {
+    if (error is FirebaseException) {
+      return 'Firestore sync failed while $action: ${error.code} ${error.message ?? ''}'
+          .trim();
+    }
+    return 'Firestore sync failed while $action: $error';
   }
 
   String generateNewId() {
