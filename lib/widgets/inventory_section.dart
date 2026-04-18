@@ -15,6 +15,8 @@ class InventorySection extends StatelessWidget {
     required this.onDraftChanged,
     required this.onSave,
     required this.onCancel,
+    required this.onDelete,
+    required this.onQuickRestock,
   });
 
   final List<String> categories;
@@ -26,6 +28,8 @@ class InventorySection extends StatelessWidget {
   final void Function(String itemId, int value) onDraftChanged;
   final void Function(String itemId) onSave;
   final void Function(String itemId) onCancel;
+  final void Function(String itemId) onDelete;
+  final void Function(String itemId) onQuickRestock;
 
   @override
   Widget build(BuildContext context) {
@@ -66,6 +70,8 @@ class InventorySection extends StatelessWidget {
                   onDraftChanged: onDraftChanged,
                   onSave: onSave,
                   onCancel: onCancel,
+                  onDelete: onDelete,
+                  onQuickRestock: onQuickRestock,
                 )),
           ],
         ),
@@ -85,6 +91,8 @@ class _CategoryGroup extends StatelessWidget {
     required this.onDraftChanged,
     required this.onSave,
     required this.onCancel,
+    required this.onDelete,
+    required this.onQuickRestock,
   });
 
   final String category;
@@ -96,6 +104,8 @@ class _CategoryGroup extends StatelessWidget {
   final void Function(String, int) onDraftChanged;
   final void Function(String) onSave;
   final void Function(String) onCancel;
+  final void Function(String) onDelete;
+  final void Function(String) onQuickRestock;
 
   @override
   Widget build(BuildContext context) {
@@ -124,6 +134,8 @@ class _CategoryGroup extends StatelessWidget {
               onDraftChanged: (v) => onDraftChanged(item.id, v),
               onSave: () => onSave(item.id),
               onCancel: () => onCancel(item.id),
+              onDelete: () => onDelete(item.id),
+              onQuickRestock: () => onQuickRestock(item.id),
             )),
         const SizedBox(height: 8),
       ],

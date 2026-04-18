@@ -111,6 +111,10 @@ class FirestoreSyncService {
     await _dishesCollection.doc(item.id).set(_dishToMap(item));
   }
 
+  Future<void> deleteMenuItem(String itemId) async {
+    await _dishesCollection.doc(itemId).delete();
+  }
+
   Future<void> updateMenuStock({
     required String itemId,
     required int stock,

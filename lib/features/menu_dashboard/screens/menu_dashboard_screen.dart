@@ -67,7 +67,7 @@ class _MenuDashboardScreenState extends State<MenuDashboardScreen> {
     _snack('Cart cleared');
   }
 
-  void _placeOrder(AppState state) {
+  Future<void> _placeOrder(AppState state) async {
     if (!state.canPlaceOrders) {
       _snack('Only waiter accounts can place orders', isError: true);
       return;
@@ -94,6 +94,15 @@ class _MenuDashboardScreenState extends State<MenuDashboardScreen> {
       }
       orderItems.add(OrderItem(menuItem: item, quantity: entry.value));
     }
+
+    final confirmed = await _confirmSendOrder(
+      tableNumber: _selectedTable!,
+      items: orderItems,
+    );
+    if (!confirmed) {
+      return;
+    }
+
     for (final entry in _cart.entries) {
       state.decrementStock(entry.key, entry.value);
     }
@@ -102,7 +111,22 @@ class _MenuDashboardScreenState extends State<MenuDashboardScreen> {
       items: orderItems,
       waiterName: state.waiterName.isEmpty ? 'Waiter' : state.waiterName,
     );
-    state.addOrder(order);
+
+    final synced = await state.addOrderAndSync(order);
+    if (!synced) {
+      for (final item in orderItems) {
+        final existing =
+            state.menuItems.where((m) => m.id == item.menuItem.id).toList();
+        if (existing.isEmpty) {
+          continue;
+        }
+        state.updateStock(
+            item.menuItem.id, existing.first.stock + item.quantity);
+      }
+      _snack('Failed to send order. Please retry.', isError: true);
+      return;
+    }
+
     state.updateTableStatus(_selectedTable.toString(), TableStatus.occupied,
         orderId: order.id);
     setState(() {
@@ -111,9 +135,260 @@ class _MenuDashboardScreenState extends State<MenuDashboardScreen> {
       _selectedTable = null;
     });
     _snack('Order sent to kitchen!');
+    if (!mounted) {
+      return;
+    }
     context.go(
       '${RouteConstants.orderDetail}?orderId=${order.id}',
       extra: order,
+    );
+  }
+
+  Future<bool> _confirmSendOrder({
+    required int tableNumber,
+    required List<OrderItem> items,
+  }) async {
+    final total = items.fold<double>(0, (sum, item) => sum + item.lineTotal);
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF2A2A2A),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        title: const Text(
+          'Confirm Send To Kitchen',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        content: SizedBox(
+          width: 420,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Table $tableNumber',
+                style: const TextStyle(
+                  color: Color(0xFFFFB74D),
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                'Order Items',
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              ...items.map(
+                (item) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 3),
+                  child: Text(
+                    '${item.quantity} x ${item.menuItem.name}  -  \$${item.lineTotal.toStringAsFixed(2)}',
+                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Total: \$${total.toStringAsFixed(2)}',
+                style: const TextStyle(
+                  color: Color(0xFFFF9800),
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton.icon(
+            onPressed: () => Navigator.pop(ctx, true),
+            icon: const Icon(Icons.send, size: 16),
+            label: const Text('Send Now'),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.green[700]),
+          ),
+        ],
+      ),
+    );
+
+    return confirmed ?? false;
+  }
+
+  List<Order> _openOrdersForTable(AppState state, String tableNumber) {
+    final tableNo = int.tryParse(tableNumber);
+    if (tableNo == null) {
+      return const <Order>[];
+    }
+    return state.orders
+        .where(
+          (o) =>
+              o.tableNumber == tableNo &&
+              o.status != OrderStatus.served &&
+              o.status != OrderStatus.cancelled,
+        )
+        .toList(growable: false);
+  }
+
+  Future<void> _payBillForTable(AppState state, RestaurantTable table) async {
+    final openOrders = _openOrdersForTable(state, table.tableNumber);
+    final total = openOrders.fold<double>(0, (sum, order) => sum + order.total);
+    final itemCount =
+        openOrders.fold<int>(0, (sum, order) => sum + order.totalItems);
+
+    final shouldPay = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF2A2A2A),
+        title: Text(
+          'Pay Bill - Table ${table.tableNumber}',
+          style: const TextStyle(color: Colors.white),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Items: $itemCount',
+              style: const TextStyle(color: Colors.white70),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Total: \$${total.toStringAsFixed(2)}',
+              style: const TextStyle(
+                color: Color(0xFFFF9800),
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              'Confirm payment and free this table?',
+              style: TextStyle(color: Colors.white70),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.green[700]),
+            child: const Text('Confirm Payment'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldPay != true) {
+      return;
+    }
+
+    // Billing should free table assignment, but kitchen keeps control
+    // of final serve status transitions.
+    state.updateTableStatus(table.tableNumber, TableStatus.empty,
+        orderId: null);
+    _snack('Payment received. Table ${table.tableNumber} is now free');
+  }
+
+  Widget _buildPayBillSection(AppState state) {
+    final occupiedTables = state.tables
+        .where((t) => t.status == TableStatus.occupied)
+        .toList(growable: false)
+      ..sort((a, b) =>
+          int.parse(a.tableNumber).compareTo(int.parse(b.tableNumber)));
+
+    return SliverToBoxAdapter(
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(16, 10, 16, 6),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: const Color(0xFF252525),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
+                Icon(Icons.receipt_long, color: Colors.white, size: 18),
+                SizedBox(width: 8),
+                Text(
+                  'Pay Bill',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 16,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            if (occupiedTables.isEmpty)
+              const Text(
+                'No occupied tables right now.',
+                style: TextStyle(color: Colors.grey),
+              )
+            else
+              ...occupiedTables.map((table) {
+                final openOrders =
+                    _openOrdersForTable(state, table.tableNumber);
+                final total = openOrders.fold<double>(
+                    0, (sum, order) => sum + order.total);
+                final orderCount = openOrders.length;
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1A1A1A),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Table ${table.tableNumber}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Open orders: $orderCount  •  Total: \$${total.toStringAsFixed(2)}',
+                              style: const TextStyle(color: Colors.grey),
+                            ),
+                          ],
+                        ),
+                      ),
+                      ElevatedButton.icon(
+                        onPressed: () => _payBillForTable(state, table),
+                        icon: const Icon(Icons.point_of_sale, size: 16),
+                        label: const Text('Pay Bill'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blueGrey[700],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+          ],
+        ),
+      ),
     );
   }
 
@@ -208,6 +483,7 @@ class _MenuDashboardScreenState extends State<MenuDashboardScreen> {
                     ),
                   ),
                 ),
+              if (state.canPlaceOrders) _buildPayBillSection(state),
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
                 sliver: SliverList(
@@ -222,6 +498,7 @@ class _MenuDashboardScreenState extends State<MenuDashboardScreen> {
                         items: catItems,
                         cart: _cart,
                         onAdd: _addToCart,
+                        showStock: true,
                       );
                     },
                     childCount: state.categories.length,

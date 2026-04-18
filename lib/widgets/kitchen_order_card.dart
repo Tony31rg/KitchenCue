@@ -133,14 +133,14 @@ class KitchenOrderCard extends StatelessWidget {
     switch (order.status) {
       case OrderStatus.pending:
         return ElevatedButton(
-          onPressed: () => onStatusChange(OrderStatus.acknowledged),
+          onPressed: () => onStatusChange(OrderStatus.inProgress),
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF9C27B0),
+            backgroundColor: const Color(0xFF42A5F5),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10),
             ),
           ),
-          child: const Text('Acknowledge'),
+          child: const Text('Start Cooking'),
         );
       case OrderStatus.acknowledged:
         return ElevatedButton(

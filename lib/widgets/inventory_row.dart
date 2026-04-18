@@ -14,6 +14,8 @@ class InventoryRow extends StatelessWidget {
     required this.onDraftChanged,
     required this.onSave,
     required this.onCancel,
+    required this.onDelete,
+    required this.onQuickRestock,
   });
 
   final MenuItem item;
@@ -24,16 +26,13 @@ class InventoryRow extends StatelessWidget {
   final void Function(int) onDraftChanged;
   final VoidCallback onSave;
   final VoidCallback onCancel;
+  final VoidCallback onDelete;
+  final VoidCallback onQuickRestock;
 
   @override
   Widget build(BuildContext context) {
     final isEditing = draftStock != null;
     final displayStock = draftStock ?? item.stock;
-    final Color badgeColor = item.stock == 0
-        ? Colors.red[700]!
-        : item.stock <= 2
-            ? Colors.orange[700]!
-            : Colors.green[700]!;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -64,8 +63,12 @@ class InventoryRow extends StatelessWidget {
             ),
           ),
           if (!isEditing) ...[
-            _StockBadge(stock: item.stock, color: badgeColor),
-            const SizedBox(width: 10),
+            if (item.stock == 0) ...[
+              _RestockButton(onTap: onQuickRestock),
+              const SizedBox(width: 8),
+            ],
+            _DeleteButton(onTap: onDelete),
+            const SizedBox(width: 8),
             _EditButton(onTap: onEdit),
           ] else ...[
             _StockEditor(
@@ -78,31 +81,6 @@ class InventoryRow extends StatelessWidget {
             ),
           ],
         ],
-      ),
-    );
-  }
-}
-
-class _StockBadge extends StatelessWidget {
-  const _StockBadge({required this.stock, required this.color});
-  final int stock;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        stock == 0 ? 'OUT OF STOCK' : '$stock left',
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 12,
-          fontWeight: FontWeight.bold,
-        ),
       ),
     );
   }
@@ -125,6 +103,53 @@ class _EditButton extends StatelessWidget {
         child: const Text(
           'Edit Stock',
           style: TextStyle(color: Colors.white, fontSize: 13),
+        ),
+      ),
+    );
+  }
+}
+
+class _DeleteButton extends StatelessWidget {
+  const _DeleteButton({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: const Color(0xFF5D1E1E),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: const Icon(
+          Icons.delete_outline,
+          color: Colors.white,
+          size: 16,
+        ),
+      ),
+    );
+  }
+}
+
+class _RestockButton extends StatelessWidget {
+  const _RestockButton({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: const Color(0xFF2E7D32),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: const Text(
+          'Show Stock',
+          style: TextStyle(color: Colors.white, fontSize: 12),
         ),
       ),
     );

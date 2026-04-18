@@ -10,12 +10,14 @@ class CategorySection extends StatelessWidget {
     required this.items,
     required this.cart,
     required this.onAdd,
+    this.showStock = true,
   });
 
   final String category;
   final List<MenuItem> items;
   final Map<String, int> cart;
   final void Function(MenuItem) onAdd;
+  final bool showStock;
 
   @override
   Widget build(BuildContext context) {
@@ -47,6 +49,7 @@ class CategorySection extends StatelessWidget {
             item: items[index],
             cartQty: cart[items[index].id] ?? 0,
             onAdd: () => onAdd(items[index]),
+            showStock: showStock,
           ),
         ),
         const SizedBox(height: 8),

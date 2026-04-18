@@ -291,6 +291,29 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  Future<bool> addOrderAndSync(Order order) async {
+    _orders.add(order);
+    _recalculateCapacity();
+    notifyListeners();
+
+    if (_syncingFromRemote || _syncService == null) {
+      return true;
+    }
+
+    try {
+      await _syncService!.upsertOrder(order);
+      _clearSyncError();
+      notifyListeners();
+      return true;
+    } catch (error, stackTrace) {
+      _orders.removeWhere((entry) => entry.id == order.id);
+      _recalculateCapacity();
+      _setSyncError(error, stackTrace, 'submit order');
+      notifyListeners();
+      return false;
+    }
+  }
+
   /// Update order status with appropriate timestamps (PRD US-005, US-007)
   void updateOrderStatus(String orderId, OrderStatus status) {
     final index = _orders.indexWhere((order) => order.id == orderId);
@@ -511,6 +534,31 @@ class AppState extends ChangeNotifier {
     } catch (error, stackTrace) {
       _menuItems.removeWhere((entry) => entry.id == item.id);
       _setSyncError(error, stackTrace, 'add menu item');
+      rethrow;
+    }
+  }
+
+  Future<void> deleteMenuItemAndSync(String itemId) async {
+    final index = _menuItems.indexWhere((item) => item.id == itemId);
+    if (index == -1) {
+      return;
+    }
+
+    final removed = _menuItems.removeAt(index);
+    notifyListeners();
+
+    if (_syncingFromRemote || _syncService == null) {
+      return;
+    }
+
+    try {
+      await _syncService!.deleteMenuItem(itemId);
+      _clearSyncError();
+      notifyListeners();
+    } catch (error, stackTrace) {
+      _menuItems.insert(index, removed);
+      _setSyncError(error, stackTrace, 'delete menu item');
+      notifyListeners();
       rethrow;
     }
   }

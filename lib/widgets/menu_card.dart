@@ -9,22 +9,28 @@ class MenuCard extends StatelessWidget {
     required this.item,
     required this.cartQty,
     required this.onAdd,
+    this.showStock = true,
   });
 
   final MenuItem item;
   final int cartQty;
   final VoidCallback onAdd;
+  final bool showStock;
 
   @override
   Widget build(BuildContext context) {
     final outOfStock = item.stock == 0;
+    final lowStock = item.stock > 0 && item.stock <= 5;
+    final String statusLabel = outOfStock
+        ? 'OUT OF STOCK'
+        : lowStock
+            ? '${item.stock} LEFT'
+            : 'AVAILABLE';
     final Color badgeColor = outOfStock
-        ? Colors.grey[700]!
-        : item.stock <= 2
-            ? Colors.red[600]!
-            : item.stock <= 5
-                ? Colors.orange[700]!
-                : Colors.green[700]!;
+        ? Colors.red[700]!
+        : item.stock < 5
+            ? Colors.orange[700]!
+            : Colors.green[700]!;
 
     return GestureDetector(
       onTap: outOfStock ? null : onAdd,
@@ -46,7 +52,12 @@ class MenuCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildNameRow(outOfStock, badgeColor),
+                      _buildNameRow(
+                        statusLabel,
+                        badgeColor,
+                        outOfStock,
+                        lowStock,
+                      ),
                       const Spacer(),
                       _buildPriceRow(),
                     ],
@@ -83,7 +94,12 @@ class MenuCard extends StatelessWidget {
     );
   }
 
-  Widget _buildNameRow(bool outOfStock, Color badgeColor) {
+  Widget _buildNameRow(
+    String statusLabel,
+    Color badgeColor,
+    bool outOfStock,
+    bool lowStock,
+  ) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -99,21 +115,22 @@ class MenuCard extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
           ),
         ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-          decoration: BoxDecoration(
-            color: badgeColor,
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: Text(
-            outOfStock ? 'OUT' : '${item.stock}',
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
+        if (outOfStock || lowStock)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: badgeColor,
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Text(
+              statusLabel,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
-        ),
       ],
     );
   }

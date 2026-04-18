@@ -97,7 +97,7 @@ class _TableChip extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(right: 10),
       child: GestureDetector(
-        onTap: isOccupied ? null : onTap,
+        onTap: onTap,
         child: Container(
           width: 60,
           decoration: BoxDecoration(
@@ -122,13 +122,13 @@ class _TableChip extends StatelessWidget {
               Text(
                 table.tableNumber,
                 style: TextStyle(
-                  color: isOccupied ? Colors.grey : Colors.white,
+                  color: Colors.white,
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               Text(
-                isOccupied ? 'Busy' : '${table.seats}p',
+                isOccupied ? 'Busy+' : '${table.seats}p',
                 style: TextStyle(
                   color: isOccupied ? Colors.red[300] : Colors.grey,
                   fontSize: 10,

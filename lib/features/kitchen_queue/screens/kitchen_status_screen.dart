@@ -130,27 +130,74 @@ class _KitchenStatusScreenState extends State<KitchenStatusScreen> {
                   }
                 },
                 onCancel: (id) => setState(() => _draft.remove(id)),
+                onDelete: (id) async {
+                  if (!canManageKitchen) {
+                    _snack('Only kitchen staff can delete items',
+                        isError: true);
+                    return;
+                  }
+
+                  final menuItem =
+                      state.menuItems.firstWhere((i) => i.id == id);
+                  final shouldDelete = await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      backgroundColor: const Color(0xFF2A2A2A),
+                      title: const Text(
+                        'Delete Menu Item',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                      content: Text(
+                        'Remove "${menuItem.name}" from the menu?',
+                        style: const TextStyle(color: Colors.white70),
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, false),
+                          child: const Text('Cancel'),
+                        ),
+                        ElevatedButton(
+                          onPressed: () => Navigator.pop(ctx, true),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red[700],
+                          ),
+                          child: const Text('Delete'),
+                        ),
+                      ],
+                    ),
+                  );
+
+                  if (shouldDelete != true) {
+                    return;
+                  }
+
+                  try {
+                    await state.deleteMenuItemAndSync(id);
+                    if (!mounted) {
+                      return;
+                    }
+                    _snack('"${menuItem.name}" removed from menu');
+                  } catch (_) {
+                    if (!mounted) {
+                      return;
+                    }
+                    _snack('Failed to delete item. Please retry.',
+                        isError: true);
+                  }
+                },
+                onQuickRestock: (id) {
+                  if (!canManageKitchen) {
+                    _snack('Only kitchen staff can restock items',
+                        isError: true);
+                    return;
+                  }
+                  state.updateStock(id, 1);
+                  _snack('Item is back in stock (1)');
+                },
               ),
             ),
             SliverToBoxAdapter(
               child: QuickActionsSection(
-                onAddStockToAll: () {
-                  if (!canManageKitchen) {
-                    _snack('Only kitchen staff can bulk update stock',
-                        isError: true);
-                    return;
-                  }
-                  state.addStockToAll(5);
-                  _snack('Added 5 to all items');
-                },
-                onResetAllStock: () {
-                  if (!canManageKitchen) {
-                    _snack('Only kitchen staff can reset stock', isError: true);
-                    return;
-                  }
-                  state.resetAllStock(10);
-                  _snack('Reset all stock to 10');
-                },
                 onAddMenuItem: () async {
                   if (!canManageKitchen) {
                     _snack('Only kitchen staff can add menu items',

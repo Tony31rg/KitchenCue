@@ -238,7 +238,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     autofocus: true,
                     onSubmitted: (_) => _login(),
                     decoration: InputDecoration(
-                      hintText: 'Staff ID or email (e.g. w01)',
+                      hintText:
+                          'Staff ID or Email (e.g. w01 or name@kitchencue.com)',
                       hintStyle: const TextStyle(color: Color(0xFF8C8C8C)),
                       filled: true,
                       fillColor: const Color(0xFF242424),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../models/menu_item.dart';
 import '../models/restaurant_table.dart';
 import 'cart_item.dart';
@@ -33,7 +34,7 @@ class CartOverlay extends StatefulWidget {
   final void Function(String) onRemove;
   final VoidCallback onClear;
   final VoidCallback onClose;
-  final VoidCallback onPlaceOrder;
+  final Future<void> Function() onPlaceOrder;
 
   @override
   State<CartOverlay> createState() => _CartOverlayState();
@@ -41,6 +42,7 @@ class CartOverlay extends StatefulWidget {
 
 class _CartOverlayState extends State<CartOverlay> {
   final TextEditingController _newTableCtrl = TextEditingController();
+  bool _isSubmittingOrder = false;
 
   @override
   void dispose() {
@@ -91,6 +93,21 @@ class _CartOverlayState extends State<CartOverlay> {
         ],
       ),
     );
+  }
+
+  Future<void> _handlePlaceOrder() async {
+    if (_isSubmittingOrder) {
+      return;
+    }
+
+    setState(() => _isSubmittingOrder = true);
+    try {
+      await widget.onPlaceOrder();
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmittingOrder = false);
+      }
+    }
   }
 
   @override
@@ -238,26 +255,38 @@ class _CartOverlayState extends State<CartOverlay> {
               const SizedBox(width: 12),
               Expanded(
                 child: ElevatedButton.icon(
-                  onPressed: widget.cart.isEmpty || widget.selectedTable == null
-                      ? () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                widget.cart.isEmpty
-                                    ? 'Add items to cart first'
-                                    : 'Please select a table',
-                              ),
-                              backgroundColor: Colors.red[700],
-                              behavior: SnackBarBehavior.floating,
-                            ),
-                          );
-                        }
-                      : widget.onPlaceOrder,
+                  onPressed: _isSubmittingOrder
+                      ? null
+                      : widget.cart.isEmpty || widget.selectedTable == null
+                          ? () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    widget.cart.isEmpty
+                                        ? 'Add items to cart first'
+                                        : 'Please select a table',
+                                  ),
+                                  backgroundColor: Colors.red[700],
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            }
+                          : _handlePlaceOrder,
                   icon: const Icon(Icons.send, size: 18),
-                  label: const Text('SEND TO KITCHEN'),
+                  label: _isSubmittingOrder
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text('SEND TO KITCHEN'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor:
-                        widget.cart.isEmpty || widget.selectedTable == null
+                    backgroundColor: _isSubmittingOrder
+                        ? Colors.grey[700]
+                        : widget.cart.isEmpty || widget.selectedTable == null
                             ? Colors.grey[700]
                             : Colors.green[700],
                     padding: const EdgeInsets.symmetric(vertical: 14),
