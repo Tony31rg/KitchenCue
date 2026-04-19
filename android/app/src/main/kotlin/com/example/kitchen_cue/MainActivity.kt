@@ -1,4 +1,4 @@
-package com.example.kitchen_cue
+package com.kitchencue.app
 
 import io.flutter.embedding.android.FlutterActivity
 
