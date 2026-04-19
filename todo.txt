@@ -1,5 +1,0 @@
-
-4. done - upload/save/reuse dishes on firestore
-5. done - CRUD orders with status in firestore
-6. done - CRUD stocks for meal in firestore
-7. done - busy mode flag stored in firestore
